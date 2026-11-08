@@ -15,6 +15,9 @@
       const u = urlSegura(url.replace(/&amp;/g, "&"));
       return u ? `<img src="${escapar(u)}" alt="${alt || "Imagem da questão"}" loading="lazy">` : "";
     });
+    // Links só para https:// ou âncoras internas (#rota): nada de javascript: vindo de conteúdo baixado.
+    s = s.replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+|#[\w-]+)\)/g, (m, t, url) =>
+      `<a href="${url}"${url.startsWith("#") ? "" : ' target="_blank" rel="noopener"'}>${t}</a>`);
     s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     s = s.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
     s = s.replace(/(^|\s)_([^_]+)_(?=\s|$|[.,;:!?])/g, "$1<em>$2</em>");
@@ -41,7 +44,10 @@
         const linhas = b.split("\n").map((l) => l.replace(/\s+$/, ""));
         if (linhas.length >= 2 && /^\|.*\|$/.test(linhas[0]) && /^\|?[\s:-]+\|/.test(linhas[1])) return tabela(linhas);
         const h = b.match(/^(#{1,4})\s+(.*)$/);
-        if (h && linhas.length === 1) return `<h4>${inline(h[2])}</h4>`;
+        if (h && linhas.length === 1) return h[1] === "###" ? `<h3>${inline(h[2])}</h3>` : `<h4>${inline(h[2])}</h4>`;
+        if (linhas.every((l) => /^- /.test(l))) return "<ul>" + linhas.map((l) => `<li>${inline(l.slice(2))}</li>`).join("") + "</ul>";
+        if (linhas.every((l) => /^\d+\. /.test(l)))
+          return "<ol>" + linhas.map((l) => `<li>${inline(l.replace(/^\d+\. /, ""))}</li>`).join("") + "</ol>";
         return "<p>" + linhas.map(inline).join("<br>") + "</p>";
       })
       .join("");

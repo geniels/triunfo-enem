@@ -5,7 +5,7 @@ Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o
 ## Onde estamos (2026-11-08)
 
 **Fase 1 concluída**, programa renomeado para **TRIunfo** (ADR 0007), aba **Guia da prova** pronta (regras do
-Edital nº 64/2026, gestão de tempo e modelo de estudo). Revisão de código feita (agent-skills + ponytail).
+Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em Configurações (ADR 0008). Revisão de código feita (agent-skills + ponytail).
 **Próximo passo:** Fase 3, Redação.
 
 ## Fases
@@ -32,7 +32,7 @@ Edital nº 64/2026, gestão de tempo e modelo de estudo). Revisão de código fe
 - 7 questões vêm com só 4 alternativas da fonte (ids 539, 783, 1305, 2256, 2326, 2475, 2497).
 
 ## Melhorias registradas (backlog)
-- Guia da prova: atualizar quando sair o edital de 2027.
+- Edital 2027: editar `app/conteudo/guia.md`, versao 2027.1, e dar push (passo a passo na ADR 0008).
 - Navegação inferior fixa no celular (hoje o menu ocupa duas linhas em 390 px).
 - Esconder a dica de atalhos de teclado em telas de toque.
 - Descrições de texto para as imagens das questões (acessibilidade para cegos; ADR 0005).

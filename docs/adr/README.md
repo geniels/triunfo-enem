@@ -15,6 +15,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0005](0005-acessibilidade-como-requisito.md) | Acessibilidade como requisito, não como extra | Aceita |
 | [0006](0006-ferramentas-de-desenvolvimento.md) | Ferramentas de desenvolvimento com agentes de IA | Aceita |
 | [0007](0007-nome-triunfo.md) | Nome do programa: TRIunfo | Aceita |
+| [0008](0008-guia-sincronizavel.md) | Guia da prova em Markdown, sincronizável sob demanda | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

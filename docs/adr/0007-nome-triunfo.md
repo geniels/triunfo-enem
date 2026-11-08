@@ -11,7 +11,7 @@ Candidatos: *Nem Desisto*, *TRIunfo*, *Tanto Bate*, *Bora ENEM*. O autor preferi
 - **Nome:** TRIunfo. Junta a **TRI** (Teoria de Resposta ao Item, o método de correção do ENEM) com "triunfo".
 - **Slogan:** "Bora, ENEM!"
 - **Grafia:** "TRIunfo", com TRI em maiúsculas. Na marca da interface, "TRI" aparece em destaque (`<b>TRI</b>unfo`).
-- **Repositório:** `geniels/triunfo`. A pasta local continua `enem-estudo`, porque renomeá-la quebraria o ambiente
+- **Repositório:** `geniels/triunfo-enem` ("triunfo" sozinho não remete ao ENEM). Na aba do navegador: "TRIunfo ENEM". A pasta local continua `enem-estudo`, porque renomeá-la quebraria o ambiente
   `.venv` (ele guarda caminhos absolutos) e a área de trabalho aberta no VS Code.
 
 ## Consequências

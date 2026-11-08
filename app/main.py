@@ -8,11 +8,12 @@ from __future__ import annotations
 import json
 from typing import Literal
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
+from app import guia
 from app.db import AREAS, IMAGENS_DIR, RAIZ, conectar, criar_tabelas
 
 STATIC_DIR = RAIZ / "app" / "static"
@@ -23,6 +24,29 @@ criar_tabelas(con)
 IMAGENS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="TRIunfo", version="0.1.0")
+
+
+@app.middleware("http")
+async def sem_cache(request: Request, call_next):
+    resposta = await call_next(request)
+    # Força o navegador a conferir (304 é barato): sem isso, uma atualização do app não aparece para o aluno.
+    resposta.headers["Cache-Control"] = "no-cache"
+    return resposta
+
+
+@app.get("/api/guia")
+def ler_guia():
+    return guia.atual()
+
+
+@app.post("/api/guia/sincronizar")
+def sincronizar_guia():
+    try:
+        return guia.sincronizar()
+    except OSError:
+        raise HTTPException(503, "Não foi possível baixar (sem internet ou servidor fora do ar). O guia atual continua valendo.")
+    except ValueError:  # inclui UnicodeDecodeError
+        raise HTTPException(502, "O arquivo recebido não é um guia válido. Nada foi alterado.")
 
 
 def filtro_sql(area: str | None, ano: int | None, idioma: str) -> tuple[str, list]:

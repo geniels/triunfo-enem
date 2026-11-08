@@ -14,6 +14,7 @@ Autor: Geniel Bonfim (GitHub: geniels). Comunicação com o usuário em **portug
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
 .\.venv\Scripts\python.exe scripts\importar_enem_dev.py  # (re)importa questões e imagens
 playwright-cli open http://localhost:8000                # testar a interface (desktop e 390 px)
+.\.venv\Scripts\python.exe -m unittest discover tests   # testes
 ```
 
 ## Regras do projeto
@@ -22,3 +23,4 @@ playwright-cli open http://localhost:8000                # testar a interface (d
 - Toda tela nova cumpre os requisitos de acessibilidade da ADR 0005; verifique com o playwright-cli antes de concluir.
 - Funcionalidade nova deve atender um princípio de estudo da ADR 0004.
 - `data/` (banco e imagens) não é versionado.
+- Regras do edital ficam em `app/conteudo/guia.md`; ao mudar, aumente `versao` (ADR 0008).
