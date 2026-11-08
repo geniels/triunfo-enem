@@ -4,9 +4,10 @@ Rodar:  .venv\\Scripts\\python.exe -m unittest discover tests
 """
 import json
 import unittest
+from datetime import date
 from pathlib import Path
 
-from app import guia, tri
+from app import guia, revisao, tri
 from app.redacao import notas_validas
 from scripts.importar_enem_dev import area_oficial
 
@@ -53,6 +54,26 @@ class TestTRI(unittest.TestCase):
         n0 = tri.nota(itens, 500, 100)
         itens[0] = (*itens[0][:3], True)
         self.assertGreater(tri.nota(itens, 500, 100), n0)
+
+
+class TestRevisao(unittest.TestCase):
+    def test_ciclo_completo(self):
+        p = revisao.proxima
+        self.assertIsNone(p([("2026-11-01", True)]))  # nunca errou
+        self.assertEqual(p([("2026-11-01", False)]), date(2026, 11, 2))
+        h = [("2026-11-01", False), ("2026-11-02", True)]
+        self.assertEqual(p(h), date(2026, 11, 5))  # +3
+        h += [("2026-11-05", True)]
+        self.assertEqual(p(h), date(2026, 11, 12))  # +7
+        h += [("2026-11-12", True)]
+        self.assertEqual(p(h), date(2026, 12, 3))  # +21
+        h += [("2026-12-03", True)]
+        self.assertIsNone(p(h))  # dominada
+
+    def test_acerto_antes_da_data_nao_conta_e_erro_recomeca(self):
+        p = revisao.proxima
+        self.assertEqual(p([("2026-11-01", False), ("2026-11-01", True)]), date(2026, 11, 2))
+        self.assertEqual(p([("2026-11-01", False), ("2026-11-02", True), ("2026-11-05", False)]), date(2026, 11, 6))
 
 
 class TestAreaOficial(unittest.TestCase):

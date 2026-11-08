@@ -22,6 +22,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0012](0012-atualizacoes.md) | Atualizações: conteúdo pelo botão, programa com aviso e instalação verificada | Aceita |
 | [0013](0013-simulado.md) | Simulado por dia de prova, na ordem e no tempo oficiais | Aceita |
 | [0014](0014-nota-tri.md) | Nota TRI com os parâmetros oficiais, validada contra notas reais | Aceita |
+| [0015](0015-revisao-espacada.md) | Revisão espaçada com prioridade pela dificuldade TRI | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

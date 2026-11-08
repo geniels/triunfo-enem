@@ -30,6 +30,7 @@ python -m venv .venv
 - **Caderno de erros automático**: a questão sai do caderno quando o aluno acerta de novo.
 - **Painel de desempenho**: acertos por área, tempo médio, motivos dos erros e histórico dos últimos 14 dias.
 - **Simulado**: um dia de prova inteiro de um ano, com tempo e numeração oficiais, cartão-resposta, marcação para revisar e **nota TRI calculada com os parâmetros oficiais do INEP** (conferida contra notas reais: diferença média abaixo de 1 ponto).
+- **Revisão do dia**: as questões erradas voltam em 1, 3, 7 e 21 dias, as mais fáceis primeiro (na TRI, errar fácil pesa mais).
 - **Redação**: temas oficiais de 1998 a 2026, folha pautada com cronômetro e contador de linhas, salvamento automático, autoavaliação pelas 5 competências com nota estimada e histórico.
 - **Guia da prova**: regras do edital do ano, gestão de tempo e modelo de estudo. Atualizável pela internet em Configurações, sem reinstalar.
 - Atalhos de teclado (A–E, Enter), tema claro e escuro, funciona no celular.

@@ -306,3 +306,5 @@ details summary { cursor: pointer; font-weight: 600; margin: .5rem 0; }
 .q.certa::after { content: " ✓"; font-size: .75em; }
 .q.errada::after { content: " ✗"; font-size: .75em; }
 .nota-tri { font-size: 1.15rem; font-weight: 800; color: var(--primaria); }
+.revisao-dia { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
+.revisao-dia h2 { margin-bottom: .25rem; }

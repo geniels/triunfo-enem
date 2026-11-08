@@ -80,7 +80,7 @@ window.addEventListener("hashchange", navegar);
 /* ---------------------------- Início ---------------------------- */
 
 async function telaInicio() {
-  const [est, f, g] = await Promise.all([api("/api/estatisticas"), filtros(), api("/api/guia")]);
+  const [est, f, g, rev] = await Promise.all([api("/api/estatisticas"), filtros(), api("/api/guia"), api("/api/revisao")]);
   const regras = g.secoes[0];
   const totalBanco = f.areas.reduce((s, a) => s + a.total, 0);
 
@@ -124,6 +124,17 @@ async function telaInicio() {
       <p>${totalBanco.toLocaleString("pt-BR")} questões oficiais de ${f.anos.length} edições do ENEM (${Math.min(...f.anos)}–${Math.max(...f.anos)}), todas no seu computador.</p>
       <a class="botao grande" href="#praticar">Praticar agora</a>
     </section>
+    ${
+      rev.hoje
+        ? `<section class="cartao destaque revisao-dia">
+            <div><h2>Revisão do dia: ${rev.hoje} ${rev.hoje === 1 ? "questão" : "questões"}</h2>
+              <p class="sub">Questões que você errou, na hora certa de rever. As mais fáceis primeiro: na TRI, errar fácil pesa mais.</p></div>
+            <button class="botao" id="revisar">Revisar agora</button>
+          </section>`
+        : rev.proximos_7_dias
+          ? `<p class="sub">Nada para revisar hoje. ${rev.proximos_7_dias} ${rev.proximos_7_dias === 1 ? "questão volta" : "questões voltam"} para revisão nos próximos 7 dias.</p>`
+          : ""
+    }
 
     <section class="numeros">
       <div class="numero"><b>${est.total}</b><span>questões respondidas</span></div>
@@ -155,6 +166,13 @@ async function telaInicio() {
         <li><b>Não erre as fáceis.</b> Na nota TRI, acertar difíceis e errar fáceis vale menos. Faça as fáceis primeiro.</li>
       </ul>
     </section>`;
+  $("#revisar")?.addEventListener("click", irParaRevisao);
+}
+
+function irParaRevisao() {
+  prefs.salvar({ ...prefs.ler(), modo: "revisao" });
+  sessao = null;
+  location.hash = "#praticar";
 }
 
 function formatarTempo(seg) {
@@ -192,6 +210,7 @@ async function telaPraticar() {
 
       <fieldset><legend>Modo</legend><div class="chips" id="f-modo">
         <button type="button" data-v="novas">Questões novas</button>
+        <button type="button" data-v="revisao">Revisão do dia</button>
         <button type="button" data-v="erros">Refazer erros</button>
         <button type="button" data-v="todas">Todas</button>
       </div></fieldset>
@@ -222,7 +241,11 @@ async function telaPraticar() {
       const aviso = $("#aviso");
       aviso.hidden = false;
       aviso.textContent =
-        p.modo === "erros" ? "Você não tem erros para refazer com esses filtros. Ótimo sinal!" : "Nenhuma questão encontrada com esses filtros.";
+        p.modo === "revisao"
+          ? "Nada para revisar hoje. As questões que você errar voltam aqui em 1, 3, 7 e 21 dias."
+          : p.modo === "erros"
+            ? "Você não tem erros para refazer com esses filtros. Ótimo sinal!"
+            : "Nenhuma questão encontrada com esses filtros.";
     }
   };
 }

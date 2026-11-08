@@ -8,15 +8,15 @@ Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o
 Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em Configurações (ADR 0008). Revisão de código feita (agent-skills + ponytail).
 Aparência: tema claro, escuro ou automático e 4 cores de destaque, com engrenagem de Configurações no topo.
 **Fase 3 em andamento:** 3.1 (escrever) e 3.2 (autoavaliar) prontas (ADR 0009).
-**Fase 2 em andamento:** 2.1 simulado completo e 2.2 nota TRI oficial prontos (ADR 0013 e 0014).
-**Próximo passo:** 2.3 revisão espaçada; depois 2.4 plano de estudos. A 3.3 (IA local) aguarda a medição de desempenho.
+**Fase 2 em andamento:** 2.1 simulado, 2.2 nota TRI e 2.3 revisão espaçada prontos (ADR 0013 a 0015).
+**Próximo passo:** 2.4 plano de estudos. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
 | Fase | Conteúdo | Status |
 |---|---|---|
 | 1 | Banco de questões 2009–2023, prática com filtros, cronômetro, motivo do erro, caderno de erros, painel | ✅ Concluída |
-| 2 | 2.1 simulado por dia, tempo e numeração oficiais ✅ · 2.2 nota TRI com parâmetros oficiais, validada ✅ · 2.3 revisão espaçada (1/3/7/21 dias) ⏳ · 2.4 plano de estudos ⏳ | ▶️ Em andamento |
+| 2 | 2.1 simulado por dia, tempo e numeração oficiais ✅ · 2.2 nota TRI com parâmetros oficiais, validada ✅ · 2.3 revisão espaçada (1/3/7/21 dias, fáceis primeiro) ✅ · 2.4 plano de estudos ⏳ | ▶️ Em andamento |
 | 3 | **Redação**: 3.1 temas desde 1998, editor pautado, cronômetro, linhas, salvamento ✅ · 3.2 autoavaliação pelas 5 competências e histórico ✅ · 3.3 correção por IA opcional ⏳ | ▶️ Em andamento |
 | 4 | **Modo escola** (prioridade do usuário): servir na rede local, alunos com login simples, painel do professor | ⏳ |
 | 5 | **Instalador `.exe` da edição Estudante** (pré-requisito real para alunos) com atualização em 1 clique; provas 2024/2025; classificação por assunto; Raspberry Pi | ⏳ |
@@ -43,7 +43,6 @@ Aparência: tema claro, escuro ou automático e 4 cores de destaque, com engrena
 
 ## Melhorias registradas (backlog)
 - Teste automatizado do simulado (montagem do dia, validação das respostas, resultado), com banco temporário.
-- Publicar a release no GitHub: o autor aprovou, mas o modo automático exige regra de permissão ou que o autor rode o comando.
 - TRI: cobertura atual de 47 das 60 combinações ano/área (2009–2023). Sem nota: 2009 CN/CH, 2016 CN/CH/LC e 2017
   (a ordem do enem.dev não casa com nenhum caderno oficial); 2011 CN, 2013 MT, 2018 CN e 2019 MT (o ajuste não confere
   com a escala do INEP, causa a investigar: provavelmente a ordem das respostas no arquivo de participantes).

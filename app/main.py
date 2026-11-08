@@ -6,6 +6,8 @@ Abrir:  http://localhost:8000
 from __future__ import annotations
 
 import json
+from collections import defaultdict
+from datetime import date, timedelta
 from typing import Literal
 
 from fastapi import FastAPI, HTTPException, Query, Request
@@ -13,7 +15,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import guia, redacao, tri, versao
+from app import guia, redacao, revisao, tri, versao
 from app.db import AREAS, IMAGENS_DIR, RAIZ, conectar, criar_tabelas
 
 STATIC_DIR = RAIZ / "app" / "static"
@@ -83,15 +85,43 @@ def filtros():
     }
 
 
+def _revisoes() -> dict:
+    """Questões com revisão para hoje (mais fáceis primeiro) e quantas vencem nos próximos 7 dias."""
+    historico = defaultdict(list)
+    for qid, dia, correta in con.execute(
+        "SELECT questao_id, date(criado_em), correta FROM respostas WHERE aluno_id = ? ORDER BY id", (ALUNO_PADRAO,)
+    ):
+        historico[qid].append((dia, bool(correta)))
+    hoje = date.today()
+    datas = {qid: d for qid, h in historico.items() if (d := revisao.proxima(h))}
+    devidas = [qid for qid, d in datas.items() if d <= hoje]
+    # Na TRI, errar questão fácil pesa mais: revisa primeiro as de menor dificuldade (parâmetro b); sem parâmetro, por último.
+    b = dict(con.execute(
+        f"SELECT questao_id, b FROM questoes_tri WHERE questao_id IN ({','.join('?' * len(devidas))})", devidas
+    )) if devidas else {}
+    devidas.sort(key=lambda q: (q not in b, b.get(q, 0)))
+    semana = sum(1 for d in datas.values() if hoje < d <= hoje + timedelta(days=7))
+    return {"hoje": devidas, "proximos_7_dias": semana}
+
+
+@app.get("/api/revisao")
+def resumo_revisao():
+    r = _revisoes()
+    return {"hoje": len(r["hoje"]), "proximos_7_dias": r["proximos_7_dias"]}
+
+
 @app.get("/api/proxima")
 def proxima(
     area: str | None = None,
     ano: int | None = None,
     idioma: Literal["ingles", "espanhol"] = "ingles",
-    modo: Literal["novas", "todas", "erros"] = "novas",
+    modo: Literal["novas", "todas", "erros", "revisao"] = "novas",
     excluir: list[int] = Query(default=[]),
 ):
     """Sorteia a próxima questão conforme o modo de estudo."""
+    if modo == "revisao":  # ordem fixa: as mais fáceis primeiro (ADR 0015)
+        fila = [q for q in _revisoes()["hoje"] if q not in set(excluir)]
+        return {"id": fila[0] if fila else None, "restantes": len(fila)}
     where, params = filtro_sql(area, ano, idioma)
     if modo == "novas":
         where += " AND q.id NOT IN (SELECT questao_id FROM respostas WHERE aluno_id = ?)"
