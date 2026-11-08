@@ -268,7 +268,7 @@ function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }
     <div class="barra-questao">
       <span class="etiqueta ${CORES_AREA[q.area]}">${esc(q.area_nome.replace(" e suas Tecnologias", ""))}</span>
       <span>ENEM ${q.ano} · Questão ${q.indice}${q.idioma ? " · " + (q.idioma === "ingles" ? "Inglês" : "Espanhol") : ""}</span>
-      <span class="cronometro" id="cronometro">0:00</span>
+      <span class="cronometro" id="cronometro" role="timer" aria-label="Tempo nesta questão">0:00</span>
     </div>
     <p class="placar">${esc(placar)}</p>
 
@@ -288,7 +288,7 @@ function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }
           .join("")}
       </ol>
 
-      <div id="retorno"></div>
+      <div id="retorno" aria-live="polite"></div>
       <div class="acoes" id="acoes">
         <button class="botao" id="confirmar" disabled>Confirmar resposta</button>
         ${proxima ? '<button class="botao secundario" id="pular">Pular</button>' : ""}
@@ -323,10 +323,17 @@ function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }
     const r = await post("/api/responder", { questao_id: q.id, alternativa: escolhida, tempo_seg: tempo });
     aoResponder?.(r.correta);
 
+    // Selo em texto além da cor: quem é daltônico também precisa distinguir certa/errada.
+    const selo = (texto) => `<span class="selo">${texto}</span>`;
     lista.querySelectorAll("button").forEach((b) => {
       b.disabled = true;
-      if (b.dataset.letra === r.gabarito) b.classList.add("certa");
-      else if (b.dataset.letra === escolhida) b.classList.add("errada");
+      if (b.dataset.letra === r.gabarito) {
+        b.classList.add("certa");
+        b.insertAdjacentHTML("beforeend", selo(r.correta ? "Correta · sua resposta" : "Correta"));
+      } else if (b.dataset.letra === escolhida) {
+        b.classList.add("errada");
+        b.insertAdjacentHTML("beforeend", selo("Sua resposta"));
+      }
     });
 
     const retorno = $("#retorno");
