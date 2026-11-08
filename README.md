@@ -29,6 +29,7 @@ python -m venv .venv
 - **Gabarito só depois de responder**, e o aluno marca **por que errou** (conteúdo, atenção, tempo ou chute).
 - **Caderno de erros automático**: a questão sai do caderno quando o aluno acerta de novo.
 - **Painel de desempenho**: acertos por área, tempo médio, motivos dos erros e histórico dos últimos 14 dias.
+- **Redação**: temas oficiais de 1998 a 2026, folha pautada com cronômetro e contador de linhas, salvamento automático, autoavaliação pelas 5 competências com nota estimada e histórico.
 - **Guia da prova**: regras do edital do ano, gestão de tempo e modelo de estudo. Atualizável pela internet em Configurações, sem reinstalar.
 - Atalhos de teclado (A–E, Enter), tema claro e escuro, funciona no celular.
 

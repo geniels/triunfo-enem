@@ -16,6 +16,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0006](0006-ferramentas-de-desenvolvimento.md) | Ferramentas de desenvolvimento com agentes de IA | Aceita |
 | [0007](0007-nome-triunfo.md) | Nome do programa: TRIunfo | Aceita |
 | [0008](0008-guia-sincronizavel.md) | Guia da prova em Markdown, sincronizável sob demanda | Aceita |
+| [0009](0009-redacao-autoavaliacao.md) | Redação: escrita cronometrada e autoavaliação guiada | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

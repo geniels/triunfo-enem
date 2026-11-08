@@ -450,20 +450,226 @@ function limparTrecho(t) {
 
 /* ---------------------------- Redação ---------------------------- */
 
-function telaRedacao() {
+const LETRAS_POR_LINHA = 70; // shortcut: média de letra cursiva na folha do ENEM; cada letra é diferente, é só estimativa
+const TEMPO_REDACAO = 80 * 60; // 1h20, o tempo sugerido no Guia da prova
+
+function contarLinhas(texto) {
+  return texto
+    .split("\n")
+    .filter((p) => p.trim())
+    .reduce((n, p) => n + Math.max(1, Math.ceil(p.trim().length / LETRAS_POR_LINHA)), 0);
+}
+const somaNotas = (notas) => Object.values(notas).reduce((s, n) => s + n, 0);
+const dataCurta = (d) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
+const patch = (caminho, corpo) =>
+  api(caminho, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(corpo) });
+
+let redacaoConteudo = null;
+async function conteudoRedacao() {
+  return (redacaoConteudo ??= await api("/api/redacao/conteudo"));
+}
+
+async function telaRedacao(id) {
+  if (id) return abrirRedacao(Number(id));
+  const [c, lista] = await Promise.all([conteudoRedacao(), api("/api/redacoes")]);
   conteudo.innerHTML = `
     <section class="cartao">
       <h1>Redação</h1>
-      <p class="sub">Módulo em construção: banco de temas desde 1998, cronômetro, checklist pelas 5 competências e correção assistida.</p>
-      <h2>As 5 competências avaliadas (até 200 pontos cada)</h2>
-      <ol class="competencias">
-        <li><b>Norma culta</b>: domínio da escrita formal da língua portuguesa.</li>
-        <li><b>Tema e tipo de texto</b>: compreender a proposta e desenvolver um texto dissertativo-argumentativo, usando repertório de várias áreas.</li>
-        <li><b>Argumentação</b>: selecionar, organizar e interpretar informações e argumentos em defesa de um ponto de vista.</li>
-        <li><b>Coesão</b>: usar bem os conectivos e mecanismos linguísticos que ligam as ideias.</li>
-        <li><b>Proposta de intervenção</b>: propor uma solução detalhada (agente, ação, meio, finalidade e detalhamento) que respeite os direitos humanos.</li>
-      </ol>
+      <p class="sub">Escolha um tema oficial do ENEM (ou escreva o seu), escreva com o cronômetro de 1h20 e depois
+        avalie seu texto pelas 5 competências, do jeito que os corretores fazem.</p>
+      <div class="campos">
+        <label class="campo-largo">Tema
+          <select id="r-tema">
+            ${c.temas.map((t) => `<option value="${esc(t.tema)}">${t.ano} · ${esc(t.tema)}${t.obs ? ` (${esc(t.obs)})` : ""}</option>`).join("")}
+            <option value="">Outro tema (digitar)…</option>
+          </select>
+        </label>
+        <label class="campo-largo" id="r-livre-rotulo" hidden>Seu tema
+          <input id="r-livre" maxlength="300" autocomplete="off">
+        </label>
+      </div>
+      <div class="acoes">
+        <button class="botao" id="r-comecar">Começar a escrever</button>
+        <button class="botao secundario" id="r-sortear">Sortear tema</button>
+      </div>
+      <p class="aviso" id="r-aviso" hidden></p>
+    </section>
+    <section class="cartao">
+      <h2>Suas redações</h2>
+      ${
+        lista.length
+          ? `<ul class="lista-redacoes">${lista
+              .map(
+                (r) => `<li><a href="#redacao/${r.id}"><b>${esc(r.tema)}</b>
+                  <span>${dataCurta(r.criado_em)} · ${
+                    !r.entregue ? "rascunho" : r.notas ? `<b>${somaNotas(r.notas)}</b> pontos (autoavaliação)` : "falta avaliar"
+                  }</span></a></li>`
+              )
+              .join("")}</ul>`
+          : "<p class='vazio'>Nenhuma ainda. A primeira é a mais difícil: comece hoje!</p>"
+      }
     </section>`;
+
+  const sel = $("#r-tema");
+  sel.onchange = () => ($("#r-livre-rotulo").hidden = sel.value !== "");
+  $("#r-sortear").onclick = () => {
+    sel.selectedIndex = Math.floor(Math.random() * c.temas.length); // a última opção ("Outro") fica de fora
+    sel.onchange();
+  };
+  $("#r-comecar").onclick = async () => {
+    const tema = (sel.value || $("#r-livre").value).trim();
+    if (tema.length < 3) {
+      $("#r-aviso").hidden = false;
+      $("#r-aviso").textContent = "Escreva o tema que você quer treinar.";
+      return;
+    }
+    const r = await post("/api/redacoes", { tema });
+    location.hash = `#redacao/${r.id}`;
+  };
+}
+
+async function abrirRedacao(id) {
+  const [r, c] = await Promise.all([api(`/api/redacoes/${id}`), conteudoRedacao()]);
+  return r.entregue ? avaliarRedacao(r, c) : escreverRedacao(r);
+}
+
+function escreverRedacao(r) {
+  conteudo.innerHTML = `
+    <div class="barra-questao">
+      <span class="etiqueta area-ling">Redação</span>
+      <span>${esc(r.tema)}</span>
+      <span class="cronometro" id="cronometro" role="timer" aria-label="Tempo de redação">0:00</span>
+    </div>
+    <article class="cartao">
+      <label for="r-texto" class="sub">Escreva em parágrafos (Enter separa um parágrafo do outro). Sem corretor
+        ortográfico, como na prova. Tudo é salvo automaticamente.</label>
+      <textarea id="r-texto" class="folha" spellcheck="false">${esc(r.texto)}</textarea>
+      <div class="rodape-folha"><span id="r-linhas"></span><span id="r-salvo" class="sub" aria-live="polite"></span></div>
+      <div class="acoes">
+        <button class="botao" id="r-entregar">Entregar e avaliar</button>
+        <a class="botao link" href="#redacao">Voltar (fica salvo)</a>
+      </div>
+    </article>`;
+
+  const area = $("#r-texto");
+  const cron = $("#cronometro");
+  const inicio = Date.now() - r.tempo_seg * 1000;
+  const tempo = () => Math.floor((Date.now() - inicio) / 1000);
+  let sujo = false;
+
+  function atualizarLinhas() {
+    const n = contarLinhas(area.value);
+    const aviso = n <= 7 ? " · até 7 linhas tira nota zero" : n > 30 ? " · passou de 30: não cabe na folha oficial" : "";
+    $("#r-linhas").innerHTML = `≈ <b>${n}</b> de 30 linhas<span class="aviso-linhas">${aviso}</span>`;
+  }
+  async function salvar(extra = {}) {
+    sujo = false;
+    await patch(`/api/redacoes/${r.id}`, { texto: area.value, tempo_seg: tempo(), ...extra });
+    const hora = new Date().toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+    const salvo = $("#r-salvo");
+    if (salvo) salvo.textContent = `Salvo às ${hora}`;
+  }
+
+  const relogio = setInterval(() => {
+    const s = tempo();
+    cron.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+    cron.classList.toggle("estourou", s > TEMPO_REDACAO);
+  }, 1000);
+  const autosalvar = setInterval(() => {
+    if (sujo) salvar().catch(() => ($("#r-salvo").textContent = "Não foi possível salvar agora"));
+  }, 10000);
+
+  area.oninput = () => {
+    sujo = true;
+    atualizarLinhas();
+  };
+  $("#r-entregar").onclick = async () => {
+    await salvar({ entregue: true });
+    navegar(); // reabre a mesma rota, agora na avaliação
+  };
+  atualizarLinhas();
+  area.focus();
+  limparTela = () => {
+    clearInterval(relogio);
+    clearInterval(autosalvar);
+    if (sujo) salvar().catch(() => {}); // saiu da tela: não perder o que foi escrito
+  };
+}
+
+function avaliarRedacao(r, c) {
+  const linhas = contarLinhas(r.texto);
+  const notas = { ...(r.notas || {}) };
+  conteudo.innerHTML = `
+    <section class="cartao">
+      <h1>Avalie sua redação</h1>
+      <p><b>Tema:</b> ${esc(r.tema)}</p>
+      <p class="sub">≈ ${linhas} linhas · ${formatarTempo(r.tempo_seg)} de escrita. Releia o texto e, para cada competência,
+        marque o nível que descreve melhor o que você escreveu. Seja exigente: é assim que se evolui.</p>
+      <details><summary>Ver o texto</summary><div class="folha leitura">${esc(r.texto) || "<i>(vazio)</i>"}</div></details>
+      ${linhas <= 7 ? '<p class="retorno nao"><b>Texto insuficiente:</b> com até 7 linhas, a redação recebe nota zero no ENEM (14.7.3).</p>' : ""}
+    </section>
+    ${c.competencias
+      .map(
+        (k, i) => `
+      <fieldset class="cartao competencia">
+        <legend>Competência ${i + 1}: ${esc(k.nome)}</legend>
+        <p class="sub">${esc(k.pergunta)}</p>
+        ${
+          k.elementos
+            ? `<div class="elementos"><p><b>Quais elementos sua proposta tem?</b></p>${k.elementos
+                .map((e) => `<label><input type="checkbox" class="elemento"> ${esc(e)}</label>`)
+                .join("")}</div>`
+            : ""
+        }
+        ${Object.entries(k.niveis)
+          .sort((a, b) => b[0] - a[0])
+          .map(
+            ([n, d]) => `<label class="nivel"><input type="radio" name="${k.id}" value="${n}"${notas[k.id] === +n ? " checked" : ""}>
+              <b>${n}</b><span>${esc(d)}</span></label>`
+          )
+          .join("")}
+      </fieldset>`
+      )
+      .join("")}
+    <section class="cartao total">
+      <p class="nota-total" aria-live="polite">Nota estimada: <b id="r-total">—</b> / 1000</p>
+      <div class="acoes">
+        <button class="botao" id="r-salvar">Salvar avaliação</button>
+        <button class="botao secundario" id="r-reescrever">Reescrever este tema</button>
+        <a class="botao link" href="#redacao">Voltar</a>
+      </div>
+      <p id="r-msg" aria-live="polite"></p>
+    </section>`;
+
+  const completo = () => Object.keys(notas).length === 5;
+  const atualizarTotal = () =>
+    ($("#r-total").textContent = completo() ? (linhas <= 7 ? 0 : somaNotas(notas)) : "—");
+
+  conteudo.onchange = (e) => {
+    const campo = e.target;
+    if (campo.type === "radio") notas[campo.name] = +campo.value;
+    if (campo.classList.contains("elemento")) {
+      // Cada elemento da proposta vale cerca de 40 pontos na C5: sugere o nível, o aluno pode ajustar.
+      const n = conteudo.querySelectorAll(".elemento:checked").length * 40;
+      conteudo.querySelector(`input[name="c5"][value="${n}"]`).checked = true;
+      notas.c5 = n;
+    }
+    atualizarTotal();
+  };
+  $("#r-salvar").onclick = async () => {
+    if (!completo()) {
+      $("#r-msg").textContent = "Marque um nível em cada uma das 5 competências.";
+      return;
+    }
+    await patch(`/api/redacoes/${r.id}`, { notas });
+    $("#r-msg").innerHTML = 'Avaliação salva. <a href="#redacao">Ver todas as redações</a>';
+  };
+  $("#r-reescrever").onclick = async () => {
+    const nova = await post("/api/redacoes", { tema: r.tema });
+    location.hash = `#redacao/${nova.id}`;
+  };
+  limparTela = () => (conteudo.onchange = null);
+  atualizarTotal();
 }
 
 /* ---------------------------- Guia da prova ---------------------------- */

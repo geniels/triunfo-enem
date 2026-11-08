@@ -6,7 +6,8 @@ Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o
 
 **Fase 1 concluída**, programa renomeado para **TRIunfo** (ADR 0007), aba **Guia da prova** pronta (regras do
 Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em Configurações (ADR 0008). Revisão de código feita (agent-skills + ponytail).
-**Próximo passo:** Fase 3, Redação.
+**Fase 3 em andamento:** 3.1 (escrever) e 3.2 (autoavaliar) prontas (ADR 0009).
+**Próximo passo:** 3.3, correção por IA opcional; depois Fase 2 (simulado e TRI).
 
 ## Fases
 
@@ -14,7 +15,7 @@ Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em 
 |---|---|---|
 | 1 | Banco de questões 2009–2023, prática com filtros, cronômetro, motivo do erro, caderno de erros, painel | ✅ Concluída |
 | 2 | Simulado completo (formato de 2 dias), estimativa TRI, revisão espaçada (1/3/7/21 dias), plano de estudos | ⏳ |
-| 3 | **Redação** (prioridade do usuário): temas desde 1998, cronômetro, checklist das 5 competências, histórico; correção por IA opcional | ⏳ Próxima |
+| 3 | **Redação**: 3.1 temas desde 1998, editor pautado, cronômetro, linhas, salvamento ✅ · 3.2 autoavaliação pelas 5 competências e histórico ✅ · 3.3 correção por IA opcional ⏳ | ▶️ Em andamento |
 | 4 | **Modo escola** (prioridade do usuário): servir na rede local, alunos com login simples, painel do professor | ⏳ |
 | 5 | Provas 2024/2025 a partir dos PDFs do INEP; classificação por assunto; instalador `.exe`; Raspberry Pi | ⏳ |
 
@@ -32,6 +33,8 @@ Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em 
 - 7 questões vêm com só 4 alternativas da fonte (ids 539, 783, 1305, 2256, 2326, 2475, 2497).
 
 ## Melhorias registradas (backlog)
+- Redação: apagar rascunhos; gráfico da evolução da nota; dica da competência mais fraca; sincronizar `redacao.json` como o guia.
+- Teste automatizado da validação de notas da redação (hoje verificada à mão: 422 para notas inválidas).
 - Edital 2027: editar `app/conteudo/guia.md`, versao 2027.1, e dar push (passo a passo na ADR 0008).
 - Navegação inferior fixa no celular (hoje o menu ocupa duas linhas em 390 px).
 - Esconder a dica de atalhos de teclado em telas de toque.

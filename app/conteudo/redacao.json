@@ -1,0 +1,112 @@
+{
+  "versao": "2026.1",
+  "temas": [
+    { "ano": 2026, "tema": "A valorização do Sistema Único de Saúde (SUS) como direito universal" },
+    { "ano": 2025, "tema": "Perspectivas acerca do envelhecimento na sociedade brasileira" },
+    { "ano": 2025, "tema": "A valorização dos trabalhadores rurais no Brasil", "obs": "aplicação em Belém, Ananindeua e Marituba" },
+    { "ano": 2024, "tema": "Desafios para a valorização da herança africana no Brasil" },
+    { "ano": 2023, "tema": "Desafios para o enfrentamento da invisibilidade do trabalho de cuidado realizado pela mulher no Brasil" },
+    { "ano": 2022, "tema": "Desafios para a valorização de comunidades e povos tradicionais no Brasil" },
+    { "ano": 2021, "tema": "Invisibilidade e registro civil: garantia de acesso à cidadania no Brasil" },
+    { "ano": 2020, "tema": "O estigma associado às doenças mentais na sociedade brasileira" },
+    { "ano": 2020, "tema": "O desafio de reduzir as desigualdades entre as regiões do Brasil", "obs": "ENEM digital" },
+    { "ano": 2020, "tema": "A falta de empatia nas relações sociais no Brasil", "obs": "reaplicação" },
+    { "ano": 2019, "tema": "Democratização do acesso ao cinema no Brasil" },
+    { "ano": 2018, "tema": "Manipulação do comportamento do usuário pelo controle de dados na internet" },
+    { "ano": 2017, "tema": "Desafios para a formação educacional de surdos no Brasil" },
+    { "ano": 2016, "tema": "Caminhos para combater a intolerância religiosa no Brasil" },
+    { "ano": 2016, "tema": "Caminhos para combater o racismo no Brasil", "obs": "2ª aplicação" },
+    { "ano": 2015, "tema": "A persistência da violência contra a mulher na sociedade brasileira" },
+    { "ano": 2014, "tema": "Publicidade infantil em questão no Brasil" },
+    { "ano": 2013, "tema": "Efeitos da implantação da Lei Seca no Brasil" },
+    { "ano": 2012, "tema": "O movimento imigratório para o Brasil no século XXI" },
+    { "ano": 2011, "tema": "Viver em rede no século XXI: os limites entre o público e o privado" },
+    { "ano": 2010, "tema": "O trabalho na construção da dignidade humana" },
+    { "ano": 2009, "tema": "O indivíduo frente à ética nacional" },
+    { "ano": 2008, "tema": "Como preservar a floresta Amazônica" },
+    { "ano": 2007, "tema": "O desafio de se conviver com a diferença" },
+    { "ano": 2006, "tema": "O poder de transformação da leitura" },
+    { "ano": 2005, "tema": "O trabalho infantil na realidade brasileira" },
+    { "ano": 2004, "tema": "Como garantir a liberdade de informação e evitar abusos nos meios de comunicação?" },
+    { "ano": 2003, "tema": "A violência na sociedade brasileira: como mudar as regras desse jogo?" },
+    { "ano": 2002, "tema": "O direito de votar: como fazer dessa conquista um meio para promover as transformações sociais de que o Brasil necessita?" },
+    { "ano": 2001, "tema": "Desenvolvimento e preservação ambiental: como conciliar os interesses em conflito?" },
+    { "ano": 2000, "tema": "Direitos da criança e do adolescente: como enfrentar esse desafio nacional?" },
+    { "ano": 1999, "tema": "Cidadania e participação social" },
+    { "ano": 1998, "tema": "Viver e aprender" }
+  ],
+  "competencias": [
+    {
+      "id": "c1",
+      "nome": "Norma culta",
+      "pergunta": "Como está a escrita formal: ortografia, acentuação, concordância, regência, pontuação e estrutura das frases?",
+      "niveis": {
+        "200": "Excelente domínio. Desvios só raros e pontuais; frases bem construídas.",
+        "160": "Bom domínio, com poucos desvios.",
+        "120": "Domínio mediano, com alguns desvios.",
+        "80": "Domínio insuficiente, com muitos desvios.",
+        "40": "Domínio precário, com desvios frequentes e diversificados.",
+        "0": "Desconhecimento da escrita formal."
+      }
+    },
+    {
+      "id": "c2",
+      "nome": "Tema, tipo de texto e repertório",
+      "pergunta": "O texto discute o tema completo, é dissertativo-argumentativo e usa repertório (dados, leis, obras, autores) de forma produtiva?",
+      "niveis": {
+        "200": "Tema completo, argumentação consistente e repertório legitimado, pertinente e bem usado.",
+        "160": "Tema completo, argumentação consistente, repertório pertinente.",
+        "120": "Tema completo, mas argumentação previsível e repertório pouco aproveitado.",
+        "80": "Cópia de trechos dos textos motivadores ou domínio insuficiente do tipo de texto.",
+        "40": "Tangencia o tema (fala só de parte dele) ou mistura outros tipos de texto.",
+        "0": "Fuga ao tema ou não é dissertativo-argumentativo: a redação inteira fica com nota zero."
+      }
+    },
+    {
+      "id": "c3",
+      "nome": "Projeto de texto e argumentação",
+      "pergunta": "Os argumentos são organizados, consistentes e defendem claramente um ponto de vista, mostrando autoria?",
+      "niveis": {
+        "200": "Argumentos consistentes e bem organizados, com projeto de texto estratégico e autoria.",
+        "160": "Argumentos organizados, com indícios de autoria.",
+        "120": "Argumentos limitados aos textos motivadores e pouco organizados.",
+        "80": "Argumentos desorganizados ou contraditórios.",
+        "40": "Informações pouco relacionadas ao tema ou incoerentes.",
+        "0": "Informações não relacionadas ao tema, sem defesa de ponto de vista."
+      }
+    },
+    {
+      "id": "c4",
+      "nome": "Coesão",
+      "pergunta": "Os parágrafos e as frases estão bem ligados, com conectivos variados e adequados (além disso, portanto, entretanto...)?",
+      "niveis": {
+        "200": "Articula muito bem as partes, com repertório variado de recursos coesivos.",
+        "160": "Articula bem, com poucas inadequações.",
+        "120": "Articulação mediana, com algumas inadequações e pouca variedade.",
+        "80": "Articulação insuficiente, com muitas inadequações.",
+        "40": "Articulação precária.",
+        "0": "Não articula as informações."
+      }
+    },
+    {
+      "id": "c5",
+      "nome": "Proposta de intervenção",
+      "pergunta": "A conclusão propõe uma solução detalhada, ligada ao tema e que respeita os direitos humanos?",
+      "elementos": [
+        "Agente: quem vai agir (governo, ministério, escola, mídia...)",
+        "Ação: o que será feito",
+        "Modo ou meio: como será feito",
+        "Efeito ou finalidade: para quê",
+        "Detalhamento: um elemento acima explicado com mais informação"
+      ],
+      "niveis": {
+        "200": "Proposta muito boa: detalhada, ligada ao tema e articulada à discussão (os 5 elementos).",
+        "160": "Proposta bem elaborada (4 elementos).",
+        "120": "Proposta mediana (3 elementos).",
+        "80": "Proposta insuficiente (2 elementos).",
+        "40": "Proposta vaga ou precária (1 elemento).",
+        "0": "Sem proposta, ou proposta que desrespeita os direitos humanos."
+      }
+    }
+  ]
+}

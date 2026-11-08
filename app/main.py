@@ -228,6 +228,78 @@ def caderno_de_erros(area: str | None = None):
     return [dict(r) | {"area_nome": AREAS.get(r["area"], r["area"])} for r in rows]
 
 
+# ---------------------------- Redação ----------------------------
+
+REDACAO_CONTEUDO = RAIZ / "app" / "conteudo" / "redacao.json"
+COMPETENCIAS = {"c1", "c2", "c3", "c4", "c5"}
+NIVEIS = {0, 40, 80, 120, 160, 200}
+
+
+@app.get("/api/redacao/conteudo")
+def redacao_conteudo():
+    return FileResponse(REDACAO_CONTEUDO)
+
+
+class NovaRedacao(BaseModel):
+    tema: str = Field(min_length=3, max_length=300)
+
+
+class AtualizaRedacao(BaseModel):
+    texto: str | None = Field(default=None, max_length=12000)
+    tempo_seg: int | None = Field(default=None, ge=0)
+    entregue: bool | None = None
+    notas: dict[str, int] | None = None
+
+
+def _redacao(rid: int) -> dict:
+    r = con.execute("SELECT * FROM redacoes WHERE id = ? AND aluno_id = ?", (rid, ALUNO_PADRAO)).fetchone()
+    if not r:
+        raise HTTPException(404, "Redação não encontrada")
+    return dict(r) | {"notas": json.loads(r["notas"]) if r["notas"] else None}
+
+
+@app.get("/api/redacoes")
+def listar_redacoes():
+    rows = con.execute(
+        "SELECT id, tema, tempo_seg, entregue, notas, criado_em, length(texto) AS caracteres "
+        "FROM redacoes WHERE aluno_id = ? ORDER BY id DESC",
+        (ALUNO_PADRAO,),
+    ).fetchall()
+    return [dict(r) | {"notas": json.loads(r["notas"]) if r["notas"] else None} for r in rows]
+
+
+@app.post("/api/redacoes")
+def criar_redacao(n: NovaRedacao):
+    with con:
+        rid = con.execute(
+            "INSERT INTO redacoes (aluno_id, tema) VALUES (?, ?) RETURNING id", (ALUNO_PADRAO, n.tema.strip())
+        ).fetchone()[0]
+    return {"id": rid}
+
+
+@app.get("/api/redacoes/{rid}")
+def abrir_redacao(rid: int):
+    return _redacao(rid)
+
+
+@app.patch("/api/redacoes/{rid}")
+def atualizar_redacao(rid: int, a: AtualizaRedacao):
+    _redacao(rid)  # 404 se não existir
+    if a.notas is not None and (set(a.notas) != COMPETENCIAS or not set(a.notas.values()) <= NIVEIS):
+        raise HTTPException(422, "Notas devem ter c1..c5, cada uma em 0, 40, 80, 120, 160 ou 200")
+    campos = a.model_dump(exclude_none=True)
+    if "notas" in campos:
+        campos["notas"] = json.dumps(campos["notas"])
+    if campos:
+        sets = ", ".join(f"{k} = ?" for k in campos)  # chaves vêm do modelo, não do usuário
+        with con:
+            con.execute(
+                f"UPDATE redacoes SET {sets}, atualizado_em = datetime('now', 'localtime') WHERE id = ?",
+                [*campos.values(), rid],
+            )
+    return _redacao(rid)
+
+
 app.mount("/imagens", StaticFiles(directory=IMAGENS_DIR), name="imagens")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 

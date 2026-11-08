@@ -59,6 +59,18 @@ CREATE TABLE IF NOT EXISTS respostas (
     criado_em    TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 CREATE INDEX IF NOT EXISTS ix_respostas_aluno_questao ON respostas (aluno_id, questao_id);
+
+CREATE TABLE IF NOT EXISTS redacoes (
+    id             INTEGER PRIMARY KEY,
+    aluno_id       INTEGER NOT NULL DEFAULT 1 REFERENCES alunos(id),
+    tema           TEXT    NOT NULL,
+    texto          TEXT    NOT NULL DEFAULT '',
+    tempo_seg      INTEGER NOT NULL DEFAULT 0,
+    entregue       INTEGER NOT NULL DEFAULT 0,
+    notas          TEXT,    -- JSON {"c1": 0..200, ..., "c5": ...}, autoavaliação
+    criado_em      TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+    atualizado_em  TEXT
+);
 """
 
 

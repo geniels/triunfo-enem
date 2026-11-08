@@ -232,3 +232,33 @@ kbd { border: 1px solid var(--linha); border-radius: 4px; padding: 0 .3rem; back
   h1 { font-size: 1.35rem; }
   .cronometro { margin-left: 0; }
 }
+
+/* Redação */
+[hidden] { display: none !important; }
+.campo-largo { display: flex; flex-direction: column; gap: .3rem; font-weight: 600; flex: 1 1 100%; }
+.campo-largo select, .campo-largo input { width: 100%; min-width: 0; font: inherit; padding: .5rem .7rem;
+  border-radius: 8px; border: 1px solid var(--linha); background: var(--cartao); color: var(--texto); }
+.folha {
+  display: block; width: 100%; min-height: 60vh; margin-top: .75rem; padding: 0 .75rem;
+  font-family: inherit; font-size: 1.05rem; line-height: 2rem; color: var(--texto); resize: vertical;
+  border: 1px solid var(--linha); border-radius: 8px; background-color: var(--cartao);
+  background-image: linear-gradient(transparent calc(2rem - 1px), var(--linha) calc(2rem - 1px));
+  background-size: 100% 2rem; background-attachment: local;
+}
+.folha.leitura { min-height: 0; white-space: pre-wrap; }
+.rodape-folha { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .5rem; margin-top: .5rem; }
+.aviso-linhas { color: var(--nao); font-weight: 600; }
+.lista-redacoes { list-style: none; padding: 0; margin: 0; }
+.lista-redacoes a { display: flex; flex-direction: column; gap: .2rem; padding: .75rem 0;
+  border-bottom: 1px solid var(--linha); color: inherit; text-decoration: none; }
+.lista-redacoes span { color: var(--suave); font-size: .9rem; }
+.competencia { border: 1px solid var(--linha); }
+.competencia legend { font-weight: 700; padding: 0 .4rem; }
+.nivel { display: grid; grid-template-columns: auto 3rem 1fr; gap: .5rem; align-items: start;
+  padding: .55rem .4rem; border-radius: 8px; cursor: pointer; }
+.nivel:hover { background: var(--fundo); }
+.nivel:has(input:checked) { background: var(--fundo); outline: 2px solid var(--primaria); }
+.elementos { margin-bottom: .75rem; }
+.elementos label { display: block; padding: .25rem 0; }
+.nota-total { font-size: 1.3rem; margin: 0; }
+details summary { cursor: pointer; font-weight: 600; margin: .5rem 0; }
