@@ -10,7 +10,7 @@ rede local (modo escola, em desenvolvimento).
 
 1. Instale o [Python 3.12+](https://www.python.org/downloads/) e marque **"Add python.exe to PATH"**.
 2. Baixe este projeto e dê dois cliques em **`iniciar.bat`**.
-3. Na primeira vez, ele baixa as questões (cerca de 2.700, de 2009 a 2023) e as imagens. Depois disso, **funciona sem internet**.
+3. Na primeira vez, ele baixa as questões (cerca de 2.700, de 2009 a 2023), as imagens e os parâmetros da nota TRI (cerca de 30 MB). Depois disso, **funciona sem internet**.
 4. O navegador abre em <http://localhost:8000>.
 
 ### Manualmente (qualquer sistema)
@@ -29,7 +29,7 @@ python -m venv .venv
 - **Gabarito só depois de responder**, e o aluno marca **por que errou** (conteúdo, atenção, tempo ou chute).
 - **Caderno de erros automático**: a questão sai do caderno quando o aluno acerta de novo.
 - **Painel de desempenho**: acertos por área, tempo médio, motivos dos erros e histórico dos últimos 14 dias.
-- **Simulado**: um dia de prova inteiro de um ano, com tempo e numeração oficiais, cartão-resposta, marcação para revisar e resultado por área.
+- **Simulado**: um dia de prova inteiro de um ano, com tempo e numeração oficiais, cartão-resposta, marcação para revisar e **nota TRI calculada com os parâmetros oficiais do INEP** (conferida contra notas reais: diferença média abaixo de 1 ponto).
 - **Redação**: temas oficiais de 1998 a 2026, folha pautada com cronômetro e contador de linhas, salvamento automático, autoavaliação pelas 5 competências com nota estimada e histórico.
 - **Guia da prova**: regras do edital do ano, gestão de tempo e modelo de estudo. Atualizável pela internet em Configurações, sem reinstalar.
 - Atalhos de teclado (A–E, Enter), tema claro e escuro, funciona no celular.

@@ -21,6 +21,12 @@ if not exist "data\.importado" (
   ".venv\Scripts\python.exe" scripts\importar_enem_dev.py || goto erro
 )
 
+if not exist "data\.tri" (
+  echo Baixando os parametros oficiais da nota TRI (cerca de 30 MB, so na primeira vez)...
+  rem Se falhar, o TRIunfo funciona do mesmo jeito, so sem a nota TRI no simulado; tenta de novo na proxima vez.
+  ".venv\Scripts\python.exe" scripts\importar_tri.py
+)
+
 echo.
 echo TRIunfo rodando em http://localhost:8000
 echo Feche esta janela para desligar.

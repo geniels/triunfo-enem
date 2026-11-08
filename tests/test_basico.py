@@ -2,9 +2,11 @@
 
 Rodar:  .venv\\Scripts\\python.exe -m unittest discover tests
 """
+import json
 import unittest
+from pathlib import Path
 
-from app import guia
+from app import guia, tri
 from app.redacao import notas_validas
 from scripts.importar_enem_dev import area_oficial
 
@@ -36,6 +38,21 @@ class TestNotasRedacao(unittest.TestCase):
         for notas in (cinco | {"c5": 999}, cinco | {"c5": 100}, cinco, cinco | {"c5": 200, "c6": 0},
                       cinco | {"c5": True}):
             self.assertFalse(notas_validas(notas), notas)
+
+
+class TestTRI(unittest.TestCase):
+    def test_reproduz_notas_oficiais(self):
+        dados = json.loads((Path(__file__).parent / "dados" / "tri_2020_mt.json").read_text(encoding="utf-8"))
+        k, s = dados["escala"]["k"], dados["escala"]["s"]
+        for caso in dados["casos"]:
+            calculada = tri.nota([tuple(i) for i in caso["itens"]], k, s)
+            self.assertAlmostEqual(calculada, caso["nota_oficial"], delta=1.0)
+
+    def test_mais_acertos_nao_diminui_a_nota(self):
+        itens = [(1.5, b / 10, 0.2, False) for b in range(-20, 25)]
+        n0 = tri.nota(itens, 500, 100)
+        itens[0] = (*itens[0][:3], True)
+        self.assertGreater(tri.nota(itens, 500, 100), n0)
 
 
 class TestAreaOficial(unittest.TestCase):

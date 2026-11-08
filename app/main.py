@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import guia, redacao, versao
+from app import guia, redacao, tri, versao
 from app.db import AREAS, IMAGENS_DIR, RAIZ, conectar, criar_tabelas
 
 STATIC_DIR = RAIZ / "app" / "static"
@@ -361,7 +361,29 @@ def _resultado(s: dict) -> dict:
         a["brancos"] += resposta is None
         a["acertos"] += resposta == r["gabarito"]
         itens.append({"id": r["id"], "indice": r["indice"], "area": r["area"], "resposta": resposta, "gabarito": r["gabarito"]})
+    _nota_tri(s["ano"], areas, itens)
     return {"areas": list(areas.values()), "itens": itens}
+
+
+def _nota_tri(ano: int, areas: dict, itens: list[dict]) -> None:
+    """Nota TRI por área, só quando a escala passou na conferência contra as notas oficiais (ADR 0014)."""
+    params = {
+        r["questao_id"]: r
+        for r in con.execute(
+            f"SELECT * FROM questoes_tri WHERE questao_id IN ({','.join('?' * len(itens))})", [i["id"] for i in itens]
+        )
+    }
+    for area, a in areas.items():
+        escala = con.execute(
+            "SELECT k, s, erro_medio FROM tri_escala WHERE ano = ? AND area = ? AND erro_medio < 1", (ano, area)
+        ).fetchone()
+        da_area = [i for i in itens if i["area"] == area]
+        usadas = [(params[i["id"]], i) for i in da_area if i["id"] in params and not params[i["id"]]["anulada"]]
+        if not escala or len(usadas) < 0.9 * len(da_area):
+            continue
+        a["nota_tri"] = tri.nota([(p["a"], p["b"], p["c"], i["resposta"] == i["gabarito"]) for p, i in usadas],
+                                 escala["k"], escala["s"])
+        a["tri_questoes"] = len(usadas)
 
 
 def _simulado(sid: int) -> dict:

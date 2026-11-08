@@ -920,13 +920,20 @@ function resultadoSimulado(s) {
           (a) => `<div class="linha-area">
             <div class="linha-area-topo"><span class="bolinha ${CORES_AREA[a.area]}"></span>
               <span class="nome">${esc(a.nome.replace(" e suas Tecnologias", ""))}</span>
-              <span class="valor">${a.acertos}/${a.total}</span></div>
+              <span class="valor">${a.acertos}/${a.total} acertos${a.nota_tri != null ? ` · <span class="nota-tri">${a.nota_tri.toLocaleString("pt-BR")}</span>` : ""}</span></div>
             <div class="barra"><div class="barra-cheia ${CORES_AREA[a.area]}" style="width:${(100 * a.acertos) / a.total}%"></div></div>
           </div>`
         )
         .join("")}
-      <p class="sub">A nota TRI estimada vai aparecer aqui quando o TRIunfo tiver os parâmetros oficiais das questões
-        (em desenvolvimento). Seus erros já estão no <a href="#erros">caderno de erros</a>.</p>
+      ${
+        areas.some((a) => a.nota_tri != null)
+          ? `<p class="sub"><b>Nota TRI estimada</b>, calculada com os parâmetros oficiais de cada questão publicados pelo
+              INEP. Conferimos o cálculo com notas oficiais de participantes: a diferença média ficou abaixo de 1 ponto.
+              Duas pessoas com o mesmo número de acertos podem ter notas diferentes: acertar as fáceis vale mais.
+              ${areas.some((a) => a.nota_tri != null && a.tri_questoes < 45) ? "Nesta prova faltam algumas questões no banco ou os parâmetros oficiais de algumas delas, então a estimativa pode variar alguns pontos." : ""}</p>`
+          : `<p class="sub">A nota TRI não está disponível para esta prova (faltam os parâmetros oficiais deste ano).</p>`
+      }
+      <p class="sub">Seus erros já estão no <a href="#erros">caderno de erros</a>.</p>
     </section>
     <section class="cartao">
       <h2>Questão por questão</h2>

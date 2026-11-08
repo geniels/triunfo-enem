@@ -305,3 +305,4 @@ details summary { cursor: pointer; font-weight: 600; margin: .5rem 0; }
 }
 .q.certa::after { content: " ✓"; font-size: .75em; }
 .q.errada::after { content: " ✗"; font-size: .75em; }
+.nota-tri { font-size: 1.15rem; font-weight: 800; color: var(--primaria); }

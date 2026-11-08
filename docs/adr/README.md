@@ -21,6 +21,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0011](0011-ia-na-redacao.md) | IA na redação: local por padrão; online só com conta paga da escola | Aceita |
 | [0012](0012-atualizacoes.md) | Atualizações: conteúdo pelo botão, programa com aviso e instalação verificada | Aceita |
 | [0013](0013-simulado.md) | Simulado por dia de prova, na ordem e no tempo oficiais | Aceita |
+| [0014](0014-nota-tri.md) | Nota TRI com os parâmetros oficiais, validada contra notas reais | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

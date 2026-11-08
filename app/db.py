@@ -72,6 +72,19 @@ CREATE TABLE IF NOT EXISTS redacoes (
     atualizado_em  TEXT
 );
 
+-- Parâmetros TRI oficiais de cada questão (microdados do INEP) e escala de cada área/ano (ADR 0014).
+CREATE TABLE IF NOT EXISTS questoes_tri (
+    questao_id  INTEGER PRIMARY KEY REFERENCES questoes(id) ON DELETE CASCADE,
+    a REAL NOT NULL, b REAL NOT NULL, c REAL NOT NULL,
+    anulada     INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS tri_escala (
+    ano INTEGER NOT NULL, area TEXT NOT NULL,
+    k REAL NOT NULL, s REAL NOT NULL,          -- nota = k + s * theta
+    erro_medio REAL NOT NULL, amostra INTEGER NOT NULL,  -- conferência contra notas oficiais
+    PRIMARY KEY (ano, area)
+);
+
 -- Simulado de um dia de prova de um ano, na ordem oficial (ADR 0013).
 CREATE TABLE IF NOT EXISTS simulados (
     id          INTEGER PRIMARY KEY,
