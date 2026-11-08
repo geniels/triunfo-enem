@@ -29,6 +29,10 @@ Instalador de ~93 MB; instalação em ~21 s; ~120 MB instalados; primeira abertu
 ## Consequências
 - **Sem assinatura digital**, o Windows mostra o aviso do SmartScreen ("O Windows protegeu o computador" →
   "Mais informações" → "Executar assim mesmo"). Para distribuição oficial, assinar com certificado de código.
+- **Achado em 2026-11-08:** no PC de referência, com o **Controle Inteligente de Aplicativos** (Smart App Control)
+  do Windows 11 ligado, o `unins000.exe` sem assinatura foi **bloqueado** (evento 3077 do Code Integrity), sem
+  opção de "executar assim mesmo". O bloqueio depende da reputação de cada arquivo: outras execuções passaram.
+  Isso torna a assinatura digital necessária antes de distribuir em escala (ROADMAP).
 - (Resolvido pela ADR 0018.) Banco de questões e progresso do aluno estavam no mesmo arquivo: uma versão com questões novas não atualiza o banco
   de quem já instalou. Próximo passo: separar o progresso do aluno num arquivo próprio, ou atualizar as questões
   pelo botão de atualizações.

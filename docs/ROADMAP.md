@@ -32,6 +32,10 @@ Atualização em 1 clique com conferência do SHA-256 (versão 0.4.3, ADR 0019).
   1 clique virá com o instalador.
 
 ## Pendências anotadas
+- **Assinatura digital do instalador** (antes de distribuir em escala): o Controle Inteligente de Aplicativos do
+  Windows 11 bloqueou o desinstalador sem assinatura no PC de referência. Caminhos: SignPath Foundation (grátis para
+  código aberto, exige build no GitHub Actions), certificado Certum Open Source (pago, pessoa física) ou certificado
+  de assinatura de código ICP-Brasil de uma instituição parceira (escola, secretaria). Ver ADR 0017.
 - **Medir a IA local no PC de referência** (i3-N305, 8 GB): tempo por redação, uso de memória e concordância com
   redações de nota oficial conhecida. Pré-requisito da Fase 3.3.
 
