@@ -10,3 +10,8 @@ data/
 .DS_Store
 Thumbs.db
 .vscode/
+# Playwright CLI output (may contain credentials)
+.playwright-cli/
+
+# Grafo do graphify (gerado; refaca com: graphify update .)
+graphify-out/
