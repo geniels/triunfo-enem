@@ -5,7 +5,7 @@ import urllib.request
 
 from app.guia import versao as comparavel
 
-VERSAO = "0.4.0"
+VERSAO = "0.4.1"
 URL = "https://api.github.com/repos/geniels/triunfo-enem/releases/latest"
 
 

@@ -24,6 +24,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0014](0014-nota-tri.md) | Nota TRI com os parâmetros oficiais, validada contra notas reais | Aceita |
 | [0015](0015-revisao-espacada.md) | Revisão espaçada com prioridade pela dificuldade TRI | Aceita |
 | [0016](0016-plano-de-estudos.md) | Plano de estudos em ciclo, guiado pelos pontos fracos | Aceita |
+| [0017](0017-instalador-estudante.md) | Instalador da edição Estudante com Python embutido | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

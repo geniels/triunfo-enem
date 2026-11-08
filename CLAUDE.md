@@ -15,6 +15,7 @@ Autor: Geniel Bonfim (GitHub: geniels). Commits só em nome dele, **sem** linha 
 .\.venv\Scripts\python.exe scripts\importar_enem_dev.py  # (re)importa questões e imagens
 playwright-cli open http://localhost:8000                # testar a interface (desktop e 390 px)
 .\.venv\Scripts\python.exe -m unittest discover tests   # testes
+.\.venv\Scripts\python.exe instalador\construir.py       # gera dist\TRIunfo-Estudante-<versão>.exe (ADR 0017)
 ```
 
 ## Regras do projeto

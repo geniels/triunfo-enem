@@ -15,3 +15,7 @@ Thumbs.db
 
 # Grafo do graphify (gerado; refaca com: graphify update .)
 graphify-out/
+
+# Instalador (gerado por instalador/construir.py)
+build/
+dist/

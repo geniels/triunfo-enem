@@ -8,10 +8,19 @@ rede local (modo escola, em desenvolvimento).
 
 ## Como usar (Windows)
 
-1. Instale o [Python 3.12+](https://www.python.org/downloads/) e marque **"Add python.exe to PATH"**.
-2. Baixe este projeto e dê dois cliques em **`iniciar.bat`**.
-3. Na primeira vez, ele baixa as questões (cerca de 2.700, de 2009 a 2023), as imagens e os parâmetros da nota TRI (cerca de 30 MB). Depois disso, **funciona sem internet**.
-4. O navegador abre em <http://localhost:8000>.
+1. Baixe o **TRIunfo-Estudante** na [página de versões](https://github.com/geniels/triunfo-enem/releases/latest).
+2. Dê dois cliques e avance. Não precisa de senha de administrador nem de internet depois de instalado.
+3. Abra pelo atalho **TRIunfo ENEM** no Menu Iniciar ou na Área de Trabalho. Ele abre no navegador.
+
+> O Windows pode mostrar "O Windows protegeu o computador", porque o instalador ainda não tem assinatura digital.
+> Clique em **Mais informações** e depois em **Executar assim mesmo**. Para conferir o arquivo, compare o SHA-256
+> publicado junto com a versão.
+
+### Para desenvolvedores (com Python 3.12)
+
+Dê dois cliques em **`iniciar.bat`**: ele prepara o ambiente, baixa as questões, as imagens e os parâmetros da nota
+TRI na primeira vez e abre <http://localhost:8000>. Para gerar o instalador: `instalador\construir.py` (requer o
+Inno Setup 6).
 
 ### Manualmente (qualquer sistema)
 
