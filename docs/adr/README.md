@@ -25,6 +25,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0015](0015-revisao-espacada.md) | Revisão espaçada com prioridade pela dificuldade TRI | Aceita |
 | [0016](0016-plano-de-estudos.md) | Plano de estudos em ciclo, guiado pelos pontos fracos | Aceita |
 | [0017](0017-instalador-estudante.md) | Instalador da edição Estudante com Python embutido | Aceita |
+| [0018](0018-progresso-separado.md) | Progresso do aluno separado do banco de questões, com ids fixos | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

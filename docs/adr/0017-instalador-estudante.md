@@ -29,7 +29,7 @@ Instalador de ~93 MB; instalação em ~21 s; ~120 MB instalados; primeira abertu
 ## Consequências
 - **Sem assinatura digital**, o Windows mostra o aviso do SmartScreen ("O Windows protegeu o computador" →
   "Mais informações" → "Executar assim mesmo"). Para distribuição oficial, assinar com certificado de código.
-- Banco de questões e progresso do aluno estão no mesmo arquivo: uma versão com questões novas não atualiza o banco
+- (Resolvido pela ADR 0018.) Banco de questões e progresso do aluno estavam no mesmo arquivo: uma versão com questões novas não atualiza o banco
   de quem já instalou. Próximo passo: separar o progresso do aluno num arquivo próprio, ou atualizar as questões
   pelo botão de atualizações.
 - Atualização em 1 clique pelo app (ADR 0012) pode agora baixar este instalador e conferir o SHA-256.

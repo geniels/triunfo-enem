@@ -34,9 +34,15 @@ Name: "pt"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
 Name: "atalho"; Description: "Criar um atalho na Área de Trabalho"
 
 [Files]
-Source: "..\build\TRIunfo\*"; DestDir: "{app}"; Excludes: "data\enem.db"; Flags: recursesubdirs createallsubdirs ignoreversion
-; O banco guarda o progresso do aluno: numa atualização, o existente é mantido.
-Source: "..\build\TRIunfo\data\enem.db"; DestDir: "{app}\data"; Flags: onlyifdoesntexist uninsneveruninstall
+; data\questoes.db (questões e parâmetros TRI) é sempre trocado. O progresso fica em data\aluno.db, criado pelo
+; app na primeira abertura, que o instalador nunca toca (ADR 0018). Quem vem da 0.4.1 tem o progresso no
+; data\enem.db antigo: o app migra sozinho ao abrir.
+Source: "..\build\TRIunfo\*"; DestDir: "{app}"; Flags: recursesubdirs createallsubdirs ignoreversion
+
+[InstallDelete]
+; Restos do banco de questões anterior não podem ficar ao lado do novo.
+Type: files; Name: "{app}\data\questoes.db-wal"
+Type: files; Name: "{app}\data\questoes.db-shm"
 
 [Icons]
 Name: "{userprograms}\TRIunfo ENEM"; Filename: "{app}\python\python.exe"; Parameters: """{app}\triunfo.py"""; WorkingDir: "{app}"; IconFilename: "{app}\triunfo.ico"; Flags: runminimized

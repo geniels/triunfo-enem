@@ -29,7 +29,6 @@ BUILD = RAIZ / "build"
 ALVO = BUILD / "TRIunfo"
 DIST = RAIZ / "dist"
 ISCC = [Path.home() / "AppData/Local/Programs/Inno Setup 6/ISCC.exe", Path("C:/Program Files (x86)/Inno Setup 6/ISCC.exe")]
-TABELAS_DO_ALUNO = ["respostas", "redacoes", "simulados", "plano", "plano_feitos"]
 
 
 def etapa(texto: str) -> None:
@@ -74,7 +73,7 @@ def codigo() -> None:
 
 
 def dados() -> None:
-    etapa("Copiando questões, imagens e parâmetros TRI (banco sem dados de aluno)")
+    etapa("Copiando questões, imagens e parâmetros TRI (só o banco de questões: nada de dados de aluno)")
     origem = RAIZ / "data"
     for marca in (".importado", ".tri"):
         if not (origem / marca).exists():
@@ -83,13 +82,10 @@ def dados() -> None:
     shutil.copytree(origem / "imagens", destino / "imagens")
     for marca in (".importado", ".tri"):
         shutil.copy2(origem / marca, destino / marca)
-    origem_db = sqlite3.connect(origem / "enem.db")
-    db = sqlite3.connect(destino / "enem.db")
+    origem_db = sqlite3.connect(origem / "questoes.db")
+    db = sqlite3.connect(destino / "questoes.db")
     origem_db.backup(db)  # cópia consistente mesmo com o servidor aberto
     origem_db.close()
-    for tabela in TABELAS_DO_ALUNO:
-        db.execute(f"DELETE FROM {tabela}")
-    db.commit()
     db.execute("PRAGMA journal_mode = DELETE")  # um arquivo só, sem -wal/-shm
     db.execute("VACUUM")
     questoes = db.execute("SELECT COUNT(*) FROM questoes").fetchone()[0]

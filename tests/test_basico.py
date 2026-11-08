@@ -3,11 +3,13 @@
 Rodar:  .venv\\Scripts\\python.exe -m unittest discover tests
 """
 import json
+import sqlite3
+import tempfile
 import unittest
 from datetime import date
 from pathlib import Path
 
-from app import guia, plano, revisao, tri
+from app import db, guia, plano, revisao, tri
 from app.redacao import notas_validas
 from scripts.importar_enem_dev import area_oficial
 
@@ -93,6 +95,62 @@ class TestPlano(unittest.TestCase):
         self.assertEqual(p["fase"]["nome"], "Semana da prova")
         self.assertEqual(plano.fase(20)["nome"], "Reta final")
         self.assertEqual(plano.fase(60)["nome"], "Simulados")
+
+
+class TestMigracao(unittest.TestCase):
+    """Formato antigo (enem.db único, ids sequenciais) -> questoes.db + aluno.db com ids fixos (ADR 0018)."""
+
+    def montar_antigo(self, pasta: Path) -> None:
+        velho = sqlite3.connect(pasta / "enem.db")
+        velho.executescript("""
+            CREATE TABLE questoes (id INTEGER PRIMARY KEY, ano INT, indice INT, area TEXT, idioma TEXT, gabarito TEXT);
+            CREATE TABLE alternativas (questao_id INT, letra TEXT, texto TEXT);
+            CREATE TABLE questoes_tri (questao_id INTEGER PRIMARY KEY, a REAL, b REAL, c REAL, anulada INT);
+            CREATE TABLE alunos (id INTEGER PRIMARY KEY, nome TEXT);
+            CREATE TABLE respostas (id INTEGER PRIMARY KEY, aluno_id INT, questao_id INT, alternativa TEXT,
+                                    correta INT, tempo_seg INT, motivo_erro TEXT, criado_em TEXT);
+            CREATE TABLE simulados (id INTEGER PRIMARY KEY, aluno_id INT, ano INT, dia INT, idioma TEXT,
+                                    respostas TEXT, marcadas TEXT, tempo_seg INT, entregue INT, criado_em TEXT);
+            INSERT INTO questoes VALUES (1, 2022, 175, 'matematica', '', 'B'), (2, 2022, 1, 'linguagens', 'ingles', 'A');
+            INSERT INTO alternativas VALUES (1, 'B', 'certa'), (2, 'A', 'certa');
+            INSERT INTO questoes_tri VALUES (1, 1.5, 0.2, 0.1, 0);
+            INSERT INTO alunos VALUES (1, 'Eu');
+            INSERT INTO respostas VALUES (7, 1, 1, 'C', 0, 30, 'atencao', '2026-11-01 10:00:00');
+            INSERT INTO simulados VALUES (3, 1, 2022, 2, 'ingles', '{"1": "B"}', '[1, 2]', 100, 0, '2026-11-01');
+        """)
+        velho.commit()
+        velho.close()
+
+    def test_migra_progresso_e_ids(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = Path(tmp)
+            self.montar_antigo(pasta)
+            db.migrar(pasta)
+            self.assertFalse((pasta / "enem.db").exists())
+            self.assertTrue((pasta / "enem-antes-da-migracao.db").exists())
+            banco = sqlite3.connect(pasta / "questoes.db")
+            self.assertEqual(sorted(r[0] for r in banco.execute("SELECT id FROM questoes")), [20220011, 20221750])
+            self.assertEqual(banco.execute("SELECT questao_id FROM questoes_tri").fetchone()[0], 20221750)
+            self.assertEqual(banco.execute("SELECT questao_id FROM alternativas WHERE letra = 'B'").fetchone()[0], 20221750)
+            self.assertIsNone(banco.execute("SELECT name FROM sqlite_master WHERE name = 'respostas'").fetchone())
+            banco.close()
+            aluno = sqlite3.connect(pasta / "aluno.db")
+            self.assertEqual(aluno.execute("SELECT questao_id, motivo_erro FROM respostas").fetchone(), (20221750, "atencao"))
+            resp, marc = aluno.execute("SELECT respostas, marcadas FROM simulados").fetchone()
+            self.assertEqual((json.loads(resp), json.loads(marc)), ({"20221750": "B"}, [20221750, 20220011]))
+            aluno.close()
+
+    def test_atualizacao_pelo_instalador_mantem_questoes_novas(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = Path(tmp)
+            self.montar_antigo(pasta)
+            (pasta / "questoes.db").write_bytes(b"")  # o instalador já trouxe o banco novo
+            db.migrar(pasta)
+            self.assertEqual((pasta / "questoes.db").stat().st_size, 0)  # não foi substituído
+            self.assertFalse((pasta / "enem.db").exists())
+            aluno = sqlite3.connect(pasta / "aluno.db")
+            self.assertEqual(aluno.execute("SELECT questao_id FROM respostas").fetchone()[0], 20221750)
+            aluno.close()
 
 
 class TestAreaOficial(unittest.TestCase):

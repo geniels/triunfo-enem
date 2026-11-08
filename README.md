@@ -114,7 +114,7 @@ Gerar o instalador (Windows, requer o Inno Setup 6): `.venv\Scripts\python.exe i
 
 ```
 app/main.py            API (FastAPI) e servidor da interface
-app/db.py              esquema do banco SQLite (data/enem.db)
+app/db.py              bancos SQLite: data/questoes.db (conteúdo) e data/aluno.db (progresso do aluno)
 app/tri.py             nota TRI (modelo de 3 parâmetros, estimativa EAP)
 app/revisao.py         calendário da revisão espaçada
 app/plano.py           plano de estudos em ciclo

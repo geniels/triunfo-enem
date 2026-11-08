@@ -25,7 +25,7 @@ from pathlib import Path
 RAIZ = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(RAIZ))
 
-from app.db import DATA_DIR, IMAGENS_DIR, conectar, criar_tabelas  # noqa: E402
+from app.db import DATA_DIR, IMAGENS_DIR, conectar, criar_tabelas, id_questao  # noqa: E402
 
 API = "https://api.enem.dev/v1"
 USER_AGENT = "triunfo-importador/0.1"
@@ -163,9 +163,9 @@ def main() -> None:
                 arquivos = [mapa.get(u, u) for u in (q.get("files") or []) if IMAGEM_QUEBRADA not in u]
                 cur = con.execute(
                     """
-                    INSERT INTO questoes (ano, indice, area, idioma, titulo, contexto, introducao,
+                    INSERT INTO questoes (id, ano, indice, area, idioma, titulo, contexto, introducao,
                                           arquivos, gabarito, fonte)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'enem.dev')
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'enem.dev')
                     ON CONFLICT (ano, indice, idioma) DO UPDATE SET
                         area = excluded.area, titulo = excluded.titulo, contexto = excluded.contexto,
                         introducao = excluded.introducao, arquivos = excluded.arquivos,
@@ -173,6 +173,7 @@ def main() -> None:
                     RETURNING id
                     """,
                     (
+                        id_questao(q["year"], q["index"], q.get("language") or ""),
                         q["year"], q["index"], area_oficial(q["year"], q["index"], q["discipline"]),
                         q.get("language") or "", q.get("title"),
                         reescrever(q.get("context"), mapa), reescrever(q.get("alternativesIntroduction"), mapa),
@@ -192,7 +193,7 @@ def main() -> None:
 
     # Marca de importação completa: o iniciar.bat refaz a importação enquanto ela não existir.
     (DATA_DIR / ".importado").write_text(str(total), encoding="utf-8")
-    print(f"\nPronto! {total} questões no banco: {DATA_DIR / 'enem.db'}")
+    print(f"\nPronto! {total} questões no banco: {DATA_DIR / 'questoes.db'}")
 
 
 if __name__ == "__main__":

@@ -10,7 +10,8 @@ Aparência: tema claro, escuro ou automático e 4 cores de destaque, com engrena
 **Fase 3 em andamento:** 3.1 (escrever) e 3.2 (autoavaliar) prontas (ADR 0009).
 **Fase 2 concluída** (versão 0.4.0): simulado, nota TRI, revisão espaçada e plano de estudos (ADR 0013 a 0016).
 **Instalador da edição Estudante pronto** (versão 0.4.1, ADR 0017).
-**Próximo passo:** separar o progresso do aluno do banco de questões (para atualizar questões sem perder dados) e atualização em 1 clique; depois, modo escola (Fase 4). A 3.3 (IA local) aguarda a medição de desempenho.
+Progresso do aluno separado do banco de questões, com ids fixos (versão 0.4.2, ADR 0018).
+**Próximo passo:** atualização em 1 clique; depois, modo escola (Fase 4). A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 

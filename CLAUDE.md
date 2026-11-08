@@ -25,5 +25,5 @@ playwright-cli open http://localhost:8000                # testar a interface (d
 - O gabarito nunca vai ao navegador antes da resposta (ADR 0003).
 - Toda tela nova cumpre os requisitos de acessibilidade da ADR 0005; verifique com o playwright-cli antes de concluir.
 - Funcionalidade nova deve atender um princípio de estudo da ADR 0004.
-- `data/` (banco e imagens) não é versionado.
+- `data/` (questoes.db, aluno.db e imagens) não é versionado. Id de questão é fixo: use `db.id_questao()` (ADR 0018).
 - Regras do edital ficam em `app/conteudo/guia.md`; ao mudar, aumente `versao` (ADR 0008).
