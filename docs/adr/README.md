@@ -14,6 +14,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0004](0004-metodos-de-estudo-com-evidencia.md) | Funcionalidades guiadas por métodos de estudo com evidência | Aceita |
 | [0005](0005-acessibilidade-como-requisito.md) | Acessibilidade como requisito, não como extra | Aceita |
 | [0006](0006-ferramentas-de-desenvolvimento.md) | Ferramentas de desenvolvimento com agentes de IA | Aceita |
+| [0007](0007-nome-triunfo.md) | Nome do programa: TRIunfo | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

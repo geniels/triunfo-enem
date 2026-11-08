@@ -212,6 +212,20 @@ kbd { border: 1px solid var(--linha); border-radius: 4px; padding: 0 .3rem; back
 .erro-rodape { font-size: .9rem; }
 
 .competencias li { margin-bottom: .6rem; }
+
+/* Guia da prova */
+.guia { scroll-margin-top: 5rem; } /* não ficar escondido sob o cabeçalho fixo */
+.guia h3 { font-size: 1rem; margin: 1.25rem 0 .4rem; }
+.guia li { margin-bottom: .45rem; }
+.guia .tabela { margin: .75rem 0; }
+.guia table { width: 100%; }
+.indice { display: flex; flex-wrap: wrap; gap: .5rem; margin-top: .75rem; }
+.indice a { padding: .4rem .8rem; border: 1px solid var(--linha); border-radius: 999px; text-decoration: none; }
+.fonte { font-size: .85rem; color: var(--suave); }
+.checklist { list-style: none; padding: 0; }
+.checklist li { padding-left: 1.6rem; position: relative; }
+.checklist li::before { content: ""; position: absolute; left: 0; top: .2rem; width: 1rem; height: 1rem;
+  border: 2px solid var(--primaria); border-radius: 4px; }
 .fim { text-align: center; padding: 2rem; }
 
 @media (max-width: 520px) {

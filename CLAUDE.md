@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Plataforma offline de estudo para o ENEM (nome definitivo em discussão; ver `docs/ROADMAP.md`).
+Plataforma offline de estudo para o ENEM: **TRIunfo**, slogan "Bora, ENEM!" (ADR 0007).
 Autor: Geniel Bonfim (GitHub: geniels). Comunicação com o usuário em **português**.
 
 ## Antes de começar qualquer tarefa

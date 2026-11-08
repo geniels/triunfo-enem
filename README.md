@@ -1,4 +1,4 @@
-# ENEM Estudo
+# TRIunfo — Bora, ENEM!
 
 Plataforma **gratuita e offline** para estudar para o ENEM com as questões oficiais das provas,
 organizadas pelas quatro áreas do exame, mais um módulo de redação.

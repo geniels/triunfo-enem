@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import http.client
 import json
 import re
 import sys
@@ -27,7 +28,7 @@ sys.path.insert(0, str(RAIZ))
 from app.db import DATA_DIR, IMAGENS_DIR, conectar, criar_tabelas  # noqa: E402
 
 API = "https://api.enem.dev/v1"
-USER_AGENT = "enem-estudo-importador/0.1"
+USER_AGENT = "triunfo-importador/0.1"
 IMG_RE = re.compile(r"!\[[^\]]*\]\(([^)\s]+)\)")
 IMAGEM_QUEBRADA = "broken-image.svg"
 
@@ -38,7 +39,7 @@ def baixar_json(url: str, tentativas: int = 6):
             req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
             with urllib.request.urlopen(req, timeout=30) as r:
                 return json.loads(r.read().decode("utf-8"))
-        except (urllib.error.URLError, TimeoutError) as e:
+        except (OSError, ValueError, http.client.HTTPException) as e:  # rede instável, JSON cortado
             if t == tentativas - 1:
                 raise
             espera = 2 ** t
@@ -61,7 +62,9 @@ def baixar_imagem(url: str) -> bool:
         try:
             req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
             with urllib.request.urlopen(req, timeout=60) as r:
-                destino.write_bytes(r.read())
+                tmp = destino.with_suffix(".tmp")  # grava inteiro antes de valer: Ctrl+C não deixa imagem cortada
+                tmp.write_bytes(r.read())
+                tmp.replace(destino)
             return True
         except Exception as e:  # imagem individual falhando não deve parar a importação
             if t == 3:
@@ -187,6 +190,8 @@ def main() -> None:
         total += len(questoes)
         print(f"  {len(questoes)} questões gravadas")
 
+    # Marca de importação completa: o iniciar.bat refaz a importação enquanto ela não existir.
+    (DATA_DIR / ".importado").write_text(str(total), encoding="utf-8")
     print(f"\nPronto! {total} questões no banco: {DATA_DIR / 'enem.db'}")
 
 

@@ -1,4 +1,4 @@
-"""Servidor local do ENEM Estudo.
+"""Servidor local do TRIunfo.
 
 Rodar:  python -m uvicorn app.main:app --port 8000
 Abrir:  http://localhost:8000
@@ -22,7 +22,7 @@ con = conectar()
 criar_tabelas(con)
 IMAGENS_DIR.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="ENEM Estudo", version="0.1.0")
+app = FastAPI(title="TRIunfo", version="0.1.0")
 
 
 def filtro_sql(area: str | None, ano: int | None, idioma: str) -> tuple[str, list]:
@@ -130,7 +130,7 @@ class Motivo(BaseModel):
 def marcar_motivo(rid: int, m: Motivo):
     with con:
         n = con.execute(
-            "UPDATE respostas SET motivo_erro = ? WHERE id = ? AND aluno_id = ?", (m.motivo, rid, ALUNO_PADRAO)
+            "UPDATE respostas SET motivo_erro = ? WHERE id = ? AND aluno_id = ? AND correta = 0", (m.motivo, rid, ALUNO_PADRAO)
         ).rowcount
     if not n:
         raise HTTPException(404, "Resposta não encontrada")

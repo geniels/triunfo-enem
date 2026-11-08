@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-title ENEM Estudo
+title TRIunfo
 cd /d "%~dp0"
 
 where python >nul 2>nul
@@ -16,13 +16,13 @@ if not exist ".venv\Scripts\python.exe" (
 )
 ".venv\Scripts\python.exe" -m pip install -q -r requirements.txt || goto erro
 
-if not exist "data\enem.db" (
+if not exist "data\.importado" (
   echo Baixando as questoes do ENEM pela primeira vez. Isso leva alguns minutos e precisa de internet.
   ".venv\Scripts\python.exe" scripts\importar_enem_dev.py || goto erro
 )
 
 echo.
-echo ENEM Estudo rodando em http://localhost:8000
+echo TRIunfo rodando em http://localhost:8000
 echo Feche esta janela para desligar.
 start "" http://localhost:8000
 ".venv\Scripts\python.exe" -m uvicorn app.main:app --host 127.0.0.1 --port 8000

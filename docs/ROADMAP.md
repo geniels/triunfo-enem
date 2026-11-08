@@ -4,8 +4,9 @@ Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o
 
 ## Onde estamos (2026-11-08)
 
-**Fase 1 concluída** e verificada no navegador (desktop e 390 px).
-**Próximo passo:** definir o nome do programa (pendente, ver abaixo) e começar a Fase 3, Redação.
+**Fase 1 concluída**, programa renomeado para **TRIunfo** (ADR 0007), aba **Guia da prova** pronta (regras do
+Edital nº 64/2026, gestão de tempo e modelo de estudo). Revisão de código feita (agent-skills + ponytail).
+**Próximo passo:** Fase 3, Redação.
 
 ## Fases
 
@@ -18,13 +19,20 @@ Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o
 | 5 | Provas 2024/2025 a partir dos PDFs do INEP; classificação por assunto; instalador `.exe`; Raspberry Pi | ⏳ |
 
 ## Decisões pendentes
-- **Nome do programa.** "ENEM Estudo" é genérico. Ideias em discussão: *Nem Desisto*, *TRIunfo*, *Tanto Bate*.
-  Quando escolhido: criar ADR, renomear interface, README e pasta, e só então definir a identidade visual
-  (cores e logo) com a skill de UI/UX.
 - **IA na redação:** o PC-alvo tem 8 GB de RAM e não tem GPU. Um modelo local é lento e limitado; um modelo na
   nuvem é melhor, mas exige internet e chave. Provavelmente as duas opções, ambas opcionais.
 
+## Pré-requisitos do modo escola (revisão de código, 2026-11-08)
+- **Uma conexão SQLite por requisição** (hoje há uma só, compartilhada entre threads; com vários alunos ao mesmo tempo,
+  um commit ou rollback de um aluno pode afetar a resposta de outro). Usar `INSERT ... RETURNING id` em `responder`.
+- Identificar o aluno (cookie assinado ou código da turma) antes de abrir em `0.0.0.0`; avaliar `TrustedHostMiddleware`.
+- `/api/proxima`: não mandar todas as questões vistas na URL (passa do limite em sessões muito longas).
+- `esc()` nos campos vindos da fonte que entram no HTML (letra, gabarito) ou validar `A-E` no importador.
+- Importador: trocar URLs de imagem pelo regex, não por substring.
+- 7 questões vêm com só 4 alternativas da fonte (ids 539, 783, 1305, 2256, 2326, 2475, 2497).
+
 ## Melhorias registradas (backlog)
+- Guia da prova: atualizar quando sair o edital de 2027.
 - Navegação inferior fixa no celular (hoje o menu ocupa duas linhas em 390 px).
 - Esconder a dica de atalhos de teclado em telas de toque.
 - Descrições de texto para as imagens das questões (acessibilidade para cegos; ADR 0005).
