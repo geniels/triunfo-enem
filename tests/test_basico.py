@@ -9,7 +9,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from app import db, guia, plano, revisao, tri
+from app import db, guia, plano, revisao, tri, versao
 from app.redacao import notas_validas
 from scripts.importar_enem_dev import area_oficial
 
@@ -151,6 +151,19 @@ class TestMigracao(unittest.TestCase):
             aluno = sqlite3.connect(pasta / "aluno.db")
             self.assertEqual(aluno.execute("SELECT questao_id FROM respostas").fetchone()[0], 20221750)
             aluno.close()
+
+
+class TestAtualizacao(unittest.TestCase):
+    def test_so_aceita_instalador_do_repositorio_oficial_com_sha(self):
+        base = "https://github.com/geniels/triunfo-enem/releases/download/v9.9.9/"
+        def release(url_exe, com_sha=True):
+            assets = [{"name": "TRIunfo-Estudante-9.9.9.exe", "browser_download_url": url_exe, "size": 1}]
+            if com_sha:
+                assets.append({"name": "TRIunfo-Estudante-9.9.9.exe.sha256", "browser_download_url": base + "x.sha256"})
+            return {"assets": assets}
+        self.assertIsNotNone(versao._instalador(release(base + "TRIunfo-Estudante-9.9.9.exe"), "9.9.9"))
+        self.assertIsNone(versao._instalador(release("https://exemplo.com/TRIunfo.exe"), "9.9.9"))
+        self.assertIsNone(versao._instalador(release(base + "TRIunfo-Estudante-9.9.9.exe", com_sha=False), "9.9.9"))
 
 
 class TestAreaOficial(unittest.TestCase):

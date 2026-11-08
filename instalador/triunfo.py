@@ -4,6 +4,7 @@ O atalho do instalador roda:  python\\python.exe triunfo.py   (janela minimizada
 """
 import json
 import os
+import shutil
 import socket
 import sys
 import threading
@@ -38,6 +39,8 @@ def livre(porta: int) -> bool:
 
 
 def main() -> None:
+    # Instalador baixado pela atualização em 1 clique: já foi usado, só ocupa espaço (~90 MB).
+    shutil.rmtree(RAIZ / "data" / "atualizacao", ignore_errors=True)
     anterior = int(ARQUIVO_PORTA.read_text()) if ARQUIVO_PORTA.exists() else None
     if anterior and not livre(anterior) and triunfo_em(anterior):  # já está aberto: só mostra de novo
         webbrowser.open(f"http://127.0.0.1:{anterior}")

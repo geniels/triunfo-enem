@@ -60,8 +60,9 @@ primeiro minuto**. Para atualizar, instale a versão nova por cima: seu progress
 
 **Configurações**
 - Tema claro, escuro ou automático e quatro cores de destaque.
-- Botão **Verificar atualizações**: atualiza o guia quando sai um edital novo e avisa se há uma versão nova do
-  programa. Só usa a internet quando o aluno toca nele.
+- Botão **Verificar atualizações**: atualiza o guia quando sai um edital novo e, se houver versão nova do programa,
+  oferece **Atualizar agora**: baixa, confere a integridade e instala, mantendo o progresso. Só usa a internet
+  quando o aluno toca nele.
 
 **Acessibilidade**: funciona no celular, pode ser usado só pelo teclado, tem foco visível e não comunica nada apenas
 por cor.
@@ -88,7 +89,7 @@ de estudante vai para serviços que o usem para treinar inteligência artificial
 | 2 | Simulado, nota TRI oficial, revisão espaçada, plano de estudos | ✅ |
 | 3 | Redação: temas, escrita e autoavaliação ✅ · correção por IA local, opcional ⏳ | ▶️ |
 | 4 | Modo escola: vários alunos na rede local, painel do professor | ⏳ |
-| 5 | Instalador da edição Estudante ✅ · atualização em 1 clique, provas 2024/2025, questões por assunto ⏳ | ▶️ |
+| 5 | Instalador da edição Estudante ✅ · atualização em 1 clique ✅ · provas 2024/2025, questões por assunto ⏳ | ▶️ |
 
 O roteiro detalhado e as decisões do projeto estão em [docs/ROADMAP.md](docs/ROADMAP.md) e [docs/adr/](docs/adr/README.md).
 

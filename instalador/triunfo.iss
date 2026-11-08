@@ -50,12 +50,19 @@ Name: "{userdesktop}\TRIunfo ENEM"; Filename: "{app}\python\python.exe"; Paramet
 
 [Run]
 Filename: "{app}\python\python.exe"; Parameters: """{app}\triunfo.py"""; WorkingDir: "{app}"; Description: "Abrir o TRIunfo agora"; Flags: postinstall nowait skipifsilent runminimized
+; Atualização em 1 clique (ADR 0019): o app chama o instalador com /REABRIR e volta a abrir sozinho no fim.
+Filename: "{app}\python\python.exe"; Parameters: """{app}\triunfo.py"""; WorkingDir: "{app}"; Flags: nowait runminimized; Check: Reabrir
 
 [UninstallDelete]
 Type: filesandordirs; Name: "{app}\python"
 Type: filesandordirs; Name: "{app}\app"
 
 [Code]
+function Reabrir: Boolean;
+begin
+  Result := Pos('/REABRIR', Uppercase(GetCmdTail)) > 0;
+end;
+
 // Ao desinstalar, pergunta se apaga o progresso do aluno. O padrão é manter (vale para reinstalar depois).
 // Desinstalação silenciosa nunca apaga dados sem perguntar.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);

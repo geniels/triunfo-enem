@@ -51,6 +51,24 @@ def sincronizar_guia():
         raise HTTPException(502, "O arquivo recebido não é um guia válido. Nada foi alterado.")
 
 
+@app.post("/api/atualizar")
+def atualizar_programa():
+    """Baixa o instalador novo (conferindo o SHA-256) e o executa; ele fecha o TRIunfo, atualiza e reabre."""
+    if not versao.instalado():
+        raise HTTPException(409, "A atualização automática só funciona no TRIunfo instalado pelo instalador.")
+    try:
+        exe = versao.baixar_instalador()
+    except OSError:
+        raise HTTPException(503, "Não foi possível baixar agora. Verifique a internet e tente de novo.")
+    except ValueError as e:
+        raise HTTPException(502, f"Atualização cancelada: {e}.")
+    import subprocess
+    # Processo independente: o instalador fecha este servidor (CloseApplications) e reabre o app (/REABRIR).
+    subprocess.Popen([str(exe), "/SILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/REABRIR"],
+                     creationflags=subprocess.DETACHED_PROCESS | subprocess.CREATE_NEW_PROCESS_GROUP, close_fds=True)
+    return {"ok": True}
+
+
 @app.get("/api/versao")
 def verificar_versao(verificar: bool = False):
     if not verificar:  # sem internet: só informa a versão instalada

@@ -1180,12 +1180,28 @@ async function telaConfig() {
     else if (gr.dados.atualizado)
       linhas.push(`<div class="retorno ok"><b>Guia atualizado!</b> Agora com as regras do ${esc(gr.dados.edital)}. <a href="#guia">Ver as regras</a></div>`);
     else linhas.push(`<div class="retorno ok">Guia da prova: você já tem a versão mais nova.</div>`);
-    if (vr.ok && vr.dados.nova)
+    if (vr.ok && vr.dados.nova && vr.dados.pode_instalar)
+      linhas.push(`<div class="retorno destaque-aviso"><b>Nova versão do TRIunfo: ${esc(vr.dados.nova)}.</b>
+        <a href="${esc(vr.dados.url)}" target="_blank" rel="noopener">Veja o que mudou</a>. Seu progresso é mantido.
+        <div class="acoes"><button class="botao" id="atualizar">Atualizar agora (${vr.dados.tamanho_mb} MB)</button></div></div>`);
+    else if (vr.ok && vr.dados.nova)
       linhas.push(`<div class="retorno destaque-aviso"><b>Nova versão do TRIunfo: ${esc(vr.dados.nova)}.</b>
         <a href="${esc(vr.dados.url)}" target="_blank" rel="noopener">Veja o que mudou e como atualizar</a>.
         Na escola, avise o professor ou o responsável pelo laboratório.</div>`);
     else if (vr.ok) linhas.push(`<div class="retorno ok">Programa: você já tem a versão mais nova (${esc(vr.dados.atual)}).</div>`);
     saida.innerHTML = linhas.join("");
+    const atualizar = $("#atualizar");
+    if (atualizar)
+      atualizar.onclick = async () => {
+        atualizar.disabled = true;
+        atualizar.textContent = "Baixando… (pode levar alguns minutos)";
+        const r = await fetch("/api/atualizar", { method: "POST" });
+        const d = await r.json().catch(() => ({}));
+        saida.innerHTML = r.ok
+          ? `<div class="retorno ok"><b>Instalando a versão nova.</b> O TRIunfo vai fechar e abrir de novo sozinho em
+              instantes. Pode fechar esta aba.</div>`
+          : `<div class="retorno nao">${esc(d.detail || "Não foi possível atualizar agora.")}</div>`;
+      };
   };
 }
 

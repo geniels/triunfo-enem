@@ -11,7 +11,8 @@ Aparência: tema claro, escuro ou automático e 4 cores de destaque, com engrena
 **Fase 2 concluída** (versão 0.4.0): simulado, nota TRI, revisão espaçada e plano de estudos (ADR 0013 a 0016).
 **Instalador da edição Estudante pronto** (versão 0.4.1, ADR 0017).
 Progresso do aluno separado do banco de questões, com ids fixos (versão 0.4.2, ADR 0018).
-**Próximo passo:** atualização em 1 clique; depois, modo escola (Fase 4). A 3.3 (IA local) aguarda a medição de desempenho.
+Atualização em 1 clique com conferência do SHA-256 (versão 0.4.3, ADR 0019).
+**Próximo passo:** modo escola (Fase 4), começando pelos pré-requisitos de segurança. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -21,7 +22,7 @@ Progresso do aluno separado do banco de questões, com ids fixos (versão 0.4.2,
 | 2 | 2.1 simulado por dia, tempo e numeração oficiais ✅ · 2.2 nota TRI com parâmetros oficiais, validada ✅ · 2.3 revisão espaçada (1/3/7/21 dias, fáceis primeiro) ✅ · 2.4 plano de estudos em ciclo ✅ | ✅ Concluída |
 | 3 | **Redação**: 3.1 temas desde 1998, editor pautado, cronômetro, linhas, salvamento ✅ · 3.2 autoavaliação pelas 5 competências e histórico ✅ · 3.3 correção por IA opcional ⏳ | ▶️ Em andamento |
 | 4 | **Modo escola** (prioridade do usuário): servir na rede local, alunos com login simples, painel do professor | ⏳ |
-| 5 | **Instalador `.exe` da edição Estudante** ✅ (v0.4.1) · atualização em 1 clique ⏳ · provas 2024/2025; classificação por assunto; Raspberry Pi | ⏳ |
+| 5 | **Instalador `.exe` da edição Estudante** ✅ (v0.4.1) · atualização em 1 clique ✅ · provas 2024/2025; classificação por assunto; Raspberry Pi | ⏳ |
 
 ## Decisões tomadas em 2026-11-08
 - **Duas edições** (ADR 0010): Estudante (zero administração) e Escola (configurada por um responsável).
