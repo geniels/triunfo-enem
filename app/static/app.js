@@ -64,7 +64,7 @@ async function navegar() {
   limparTela?.();
   limparTela = null;
   const [rota, arg] = (location.hash.slice(1) || "inicio").split("/");
-  document.querySelectorAll("nav a").forEach((a) => a.classList.toggle("ativo", a.dataset.rota === rota));
+  document.querySelectorAll(".topo [data-rota]").forEach((a) => a.classList.toggle("ativo", a.dataset.rota === rota));
   conteudo.innerHTML = '<p class="carregando">Carregando…</p>';
   try {
     await (rotas[rota] || telaInicio)(arg);
@@ -528,6 +528,21 @@ async function telaRedacao(id) {
   };
 }
 
+// Apagar pede um segundo clique (sem diálogo do navegador, que atrapalha leitores de tela).
+function ligarApagar(rid, antes) {
+  const b = $("#r-apagar");
+  b.onclick = async () => {
+    if (!b.dataset.confirmar) {
+      b.dataset.confirmar = "1";
+      b.textContent = "Clique de novo para apagar de vez";
+      return;
+    }
+    antes?.();
+    await api(`/api/redacoes/${rid}`, { method: "DELETE" });
+    location.hash = "#redacao";
+  };
+}
+
 async function abrirRedacao(id) {
   const [r, c] = await Promise.all([api(`/api/redacoes/${id}`), conteudoRedacao()]);
   return r.entregue ? avaliarRedacao(r, c) : escreverRedacao(r);
@@ -548,6 +563,7 @@ function escreverRedacao(r) {
       <div class="acoes">
         <button class="botao" id="r-entregar">Entregar e avaliar</button>
         <a class="botao link" href="#redacao">Voltar (fica salvo)</a>
+        <button class="botao link perigo" id="r-apagar">Apagar</button>
       </div>
     </article>`;
 
@@ -587,6 +603,7 @@ function escreverRedacao(r) {
     await salvar({ entregue: true });
     navegar(); // reabre a mesma rota, agora na avaliação
   };
+  ligarApagar(r.id, () => (sujo = false)); // não salvar de volta o que foi apagado
   atualizarLinhas();
   area.focus();
   limparTela = () => {
@@ -637,6 +654,7 @@ function avaliarRedacao(r, c) {
         <button class="botao" id="r-salvar">Salvar avaliação</button>
         <button class="botao secundario" id="r-reescrever">Reescrever este tema</button>
         <a class="botao link" href="#redacao">Voltar</a>
+        <button class="botao link perigo" id="r-apagar">Apagar</button>
       </div>
       <p id="r-msg" aria-live="polite"></p>
     </section>`;
@@ -668,6 +686,7 @@ function avaliarRedacao(r, c) {
     const nova = await post("/api/redacoes", { tema: r.tema });
     location.hash = `#redacao/${nova.id}`;
   };
+  ligarApagar(r.id);
   limparTela = () => (conteudo.onchange = null);
   atualizarTotal();
 }
@@ -705,10 +724,23 @@ async function telaGuia() {
 
 async function telaConfig() {
   const g = await api("/api/guia");
+  const atual = window.aparencia({});
+  const TEMAS = { auto: "Automático (igual ao sistema)", claro: "Claro", escuro: "Escuro" };
+  const CORES = { azul: "#1f5fd1", roxo: "#6d28d9", verde: "#047857", laranja: "#c2410c" };
+  const chips = (grupo, opcoes, valor, rotulo) =>
+    `<div class="chips" id="${grupo}">${Object.entries(opcoes)
+      .map(([v, t]) => `<button type="button" data-v="${v}" class="${v === valor ? "ativo" : ""}" aria-pressed="${v === valor}">${rotulo(v, t)}</button>`)
+      .join("")}</div>`;
   conteudo.innerHTML = `
-    <section class="cartao">
+    <section class="cartao config">
       <h1>Configurações</h1>
-      <h2 class="espaco">Guia da prova</h2>
+      <fieldset><legend>Tema</legend>${chips("c-tema", TEMAS, atual.tema, (v, t) => t)}</fieldset>
+      <fieldset><legend>Cor de destaque</legend>${chips("c-cor", CORES, atual.cor,
+        (v, hex) => `<span class="amostra" style="background:${hex}"></span>${v[0].toUpperCase() + v.slice(1)}`)}</fieldset>
+      <p class="sub">A escolha fica salva neste aparelho.</p>
+    </section>
+    <section class="cartao">
+      <h2>Guia da prova</h2>
       <p>Regras de: <b>${esc(g.edital)}</b><br>Versão ${esc(g.versao)}
         (${g.origem === "sincronizado" ? "baixada da internet" : "a que veio com o TRIunfo"}).</p>
       <p class="sub">O TRIunfo funciona sem internet. Quando sair um edital novo, conecte-se e toque abaixo:
@@ -716,6 +748,18 @@ async function telaConfig() {
       <div class="acoes"><button class="botao" id="sincronizar">Verificar atualização</button></div>
       <div id="resultado" aria-live="polite"></div>
     </section>`;
+
+  for (const [grupo, chave] of [["#c-tema", "tema"], ["#c-cor", "cor"]]) {
+    $(grupo).onclick = (e) => {
+      const b = e.target.closest("button");
+      if (!b) return;
+      window.aparencia({ [chave]: b.dataset.v === "auto" ? undefined : b.dataset.v });
+      $(grupo).querySelectorAll("button").forEach((x) => {
+        x.classList.toggle("ativo", x === b);
+        x.setAttribute("aria-pressed", x === b);
+      });
+    };
+  }
 
   $("#sincronizar").onclick = async (e) => {
     const botao = e.currentTarget;

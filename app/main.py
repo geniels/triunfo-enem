@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import guia
+from app import guia, redacao
 from app.db import AREAS, IMAGENS_DIR, RAIZ, conectar, criar_tabelas
 
 STATIC_DIR = RAIZ / "app" / "static"
@@ -230,14 +230,9 @@ def caderno_de_erros(area: str | None = None):
 
 # ---------------------------- Redação ----------------------------
 
-REDACAO_CONTEUDO = RAIZ / "app" / "conteudo" / "redacao.json"
-COMPETENCIAS = {"c1", "c2", "c3", "c4", "c5"}
-NIVEIS = {0, 40, 80, 120, 160, 200}
-
-
 @app.get("/api/redacao/conteudo")
 def redacao_conteudo():
-    return FileResponse(REDACAO_CONTEUDO)
+    return FileResponse(redacao.CONTEUDO)
 
 
 class NovaRedacao(BaseModel):
@@ -285,7 +280,7 @@ def abrir_redacao(rid: int):
 @app.patch("/api/redacoes/{rid}")
 def atualizar_redacao(rid: int, a: AtualizaRedacao):
     _redacao(rid)  # 404 se não existir
-    if a.notas is not None and (set(a.notas) != COMPETENCIAS or not set(a.notas.values()) <= NIVEIS):
+    if a.notas is not None and not redacao.notas_validas(a.notas):
         raise HTTPException(422, "Notas devem ter c1..c5, cada uma em 0, 40, 80, 120, 160 ou 200")
     campos = a.model_dump(exclude_none=True)
     if "notas" in campos:
@@ -298,6 +293,15 @@ def atualizar_redacao(rid: int, a: AtualizaRedacao):
                 [*campos.values(), rid],
             )
     return _redacao(rid)
+
+
+@app.delete("/api/redacoes/{rid}")
+def apagar_redacao(rid: int):
+    with con:
+        n = con.execute("DELETE FROM redacoes WHERE id = ? AND aluno_id = ?", (rid, ALUNO_PADRAO)).rowcount
+    if not n:
+        raise HTTPException(404, "Redação não encontrada")
+    return {"ok": True}
 
 
 app.mount("/imagens", StaticFiles(directory=IMAGENS_DIR), name="imagens")

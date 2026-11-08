@@ -6,6 +6,7 @@ Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o
 
 **Fase 1 concluída**, programa renomeado para **TRIunfo** (ADR 0007), aba **Guia da prova** pronta (regras do
 Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em Configurações (ADR 0008). Revisão de código feita (agent-skills + ponytail).
+Aparência: tema claro, escuro ou automático e 4 cores de destaque, com engrenagem de Configurações no topo.
 **Fase 3 em andamento:** 3.1 (escrever) e 3.2 (autoavaliar) prontas (ADR 0009).
 **Próximo passo:** 3.3, correção por IA opcional; depois Fase 2 (simulado e TRI).
 
@@ -20,6 +21,9 @@ Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em 
 | 5 | Provas 2024/2025 a partir dos PDFs do INEP; classificação por assunto; instalador `.exe`; Raspberry Pi | ⏳ |
 
 ## Decisões pendentes
+- **Atualização do app pelo botão:** hoje o botão atualiza só o conteúdo (guia). Para o código, a proposta é o botão avisar
+  "versão X disponível" e um `atualizar.bat` aplicar a atualização com conferência de integridade, em vez de o app
+  se reescrever sozinho (risco de segurança). Aguardando decisão do autor.
 - **IA na redação:** o PC-alvo tem 8 GB de RAM e não tem GPU. Um modelo local é lento e limitado; um modelo na
   nuvem é melhor, mas exige internet e chave. Provavelmente as duas opções, ambas opcionais.
 
@@ -33,8 +37,8 @@ Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em 
 - 7 questões vêm com só 4 alternativas da fonte (ids 539, 783, 1305, 2256, 2326, 2475, 2497).
 
 ## Melhorias registradas (backlog)
-- Redação: apagar rascunhos; gráfico da evolução da nota; dica da competência mais fraca; sincronizar `redacao.json` como o guia.
-- Teste automatizado da validação de notas da redação (hoje verificada à mão: 422 para notas inválidas).
+- Redação: gráfico da evolução da nota; dica da competência mais fraca; sincronizar `redacao.json` como o guia.
+- "Conferir minha prova": o aluno informa a cor do caderno e as respostas e recebe os acertos (precisa dos gabaritos por cor de cada ano, em PDF do INEP). Útil na semana da prova; avaliar na Fase 5.
 - Edital 2027: editar `app/conteudo/guia.md`, versao 2027.1, e dar push (passo a passo na ADR 0008).
 - Navegação inferior fixa no celular (hoje o menu ocupa duas linhas em 390 px).
 - Esconder a dica de atalhos de teclado em telas de toque.

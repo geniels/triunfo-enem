@@ -5,6 +5,7 @@ Rodar:  .venv\\Scripts\\python.exe -m unittest discover tests
 import unittest
 
 from app import guia
+from app.redacao import notas_validas
 from scripts.importar_enem_dev import area_oficial
 
 
@@ -24,6 +25,17 @@ class TestGuia(unittest.TestCase):
     def test_versao_compara_numeros(self):
         self.assertGreater(guia.versao("2027.1"), guia.versao("2026.10"))
         self.assertGreater(guia.versao("2026.10"), guia.versao("2026.9"))  # não é comparação de texto
+
+
+class TestNotasRedacao(unittest.TestCase):
+    def test_aceita_niveis_oficiais(self):
+        self.assertTrue(notas_validas({"c1": 0, "c2": 40, "c3": 120, "c4": 160, "c5": 200}))
+
+    def test_recusa_notas_invalidas(self):
+        cinco = {"c1": 200, "c2": 200, "c3": 200, "c4": 200}
+        for notas in (cinco | {"c5": 999}, cinco | {"c5": 100}, cinco, cinco | {"c5": 200, "c6": 0},
+                      cinco | {"c5": True}):
+            self.assertFalse(notas_validas(notas), notas)
 
 
 class TestAreaOficial(unittest.TestCase):
