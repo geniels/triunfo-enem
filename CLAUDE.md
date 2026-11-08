@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 Plataforma offline de estudo para o ENEM: **TRIunfo**, slogan "Bora, ENEM!" (ADR 0007).
-Autor: Geniel Bonfim (GitHub: geniels). Comunicação com o usuário em **português**.
+Autor: Geniel Bonfim (GitHub: geniels). Commits só em nome dele, **sem** linha Co-Authored-By. Comunicação com o usuário em **português**.
 
 ## Antes de começar qualquer tarefa
 1. Leia `docs/ROADMAP.md`: onde estamos e qual é o próximo passo.
