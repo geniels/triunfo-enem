@@ -15,7 +15,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import guia, redacao, revisao, tri, versao
+from app import guia, plano, redacao, revisao, tri, versao
 from app.db import AREAS, IMAGENS_DIR, RAIZ, conectar, criar_tabelas
 
 STATIC_DIR = RAIZ / "app" / "static"
@@ -343,6 +343,70 @@ def apagar_redacao(rid: int):
         n = con.execute("DELETE FROM redacoes WHERE id = ? AND aluno_id = ?", (rid, ALUNO_PADRAO)).rowcount
     if not n:
         raise HTTPException(404, "Redação não encontrada")
+    return {"ok": True}
+
+
+# ---------------------------- Plano de estudos (ADR 0016) ----------------------------
+
+
+class ConfigPlano(BaseModel):
+    data_prova: date
+    horas_semana: int = Field(ge=1, le=60)
+
+
+class BlocoFeito(BaseModel):
+    posicao: int = Field(ge=0, le=60)
+    feito: bool
+
+
+def _semana() -> str:
+    ano, semana, _ = date.today().isocalendar()
+    return f"{ano}-W{semana:02d}"
+
+
+@app.get("/api/plano")
+def ler_plano():
+    cfg = con.execute("SELECT data_prova, horas_semana FROM plano WHERE aluno_id = ?", (ALUNO_PADRAO,)).fetchone()
+    if not cfg:
+        return {"configurado": False}
+    # Taxa de acerto por área só conta com pelo menos 10 respostas; antes disso, o plano trata como "sem dados".
+    taxas = {
+        area: (acertos / n if n >= 10 else None)
+        for area, n, acertos in con.execute(
+            "SELECT q.area, COUNT(*), SUM(r.correta) FROM respostas r JOIN questoes q ON q.id = r.questao_id "
+            "WHERE r.aluno_id = ? GROUP BY q.area",
+            (ALUNO_PADRAO,),
+        )
+    }
+    semana = _semana()
+    feitos = [r[0] for r in con.execute(
+        "SELECT posicao FROM plano_feitos WHERE aluno_id = ? AND semana = ?", (ALUNO_PADRAO, semana))]
+    return {
+        "configurado": True, "data_prova": cfg["data_prova"], "horas_semana": cfg["horas_semana"],
+        "semana": semana, "feitos": feitos,
+        "plano": plano.montar(cfg["horas_semana"], date.fromisoformat(cfg["data_prova"]), date.today(), taxas),
+    }
+
+
+@app.put("/api/plano")
+def configurar_plano(c: ConfigPlano):
+    with con:
+        con.execute(
+            "INSERT INTO plano (aluno_id, data_prova, horas_semana) VALUES (?, ?, ?) "
+            "ON CONFLICT (aluno_id) DO UPDATE SET data_prova = excluded.data_prova, horas_semana = excluded.horas_semana",
+            (ALUNO_PADRAO, c.data_prova.isoformat(), c.horas_semana),
+        )
+    return ler_plano()
+
+
+@app.post("/api/plano/feito")
+def marcar_bloco(b: BlocoFeito):
+    with con:
+        if b.feito:
+            con.execute("INSERT OR IGNORE INTO plano_feitos VALUES (?, ?, ?)", (ALUNO_PADRAO, _semana(), b.posicao))
+        else:
+            con.execute("DELETE FROM plano_feitos WHERE aluno_id = ? AND semana = ? AND posicao = ?",
+                        (ALUNO_PADRAO, _semana(), b.posicao))
     return {"ok": True}
 
 

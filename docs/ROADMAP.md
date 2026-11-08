@@ -8,15 +8,15 @@ Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o
 Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em Configurações (ADR 0008). Revisão de código feita (agent-skills + ponytail).
 Aparência: tema claro, escuro ou automático e 4 cores de destaque, com engrenagem de Configurações no topo.
 **Fase 3 em andamento:** 3.1 (escrever) e 3.2 (autoavaliar) prontas (ADR 0009).
-**Fase 2 em andamento:** 2.1 simulado, 2.2 nota TRI e 2.3 revisão espaçada prontos (ADR 0013 a 0015).
-**Próximo passo:** 2.4 plano de estudos. A 3.3 (IA local) aguarda a medição de desempenho.
+**Fase 2 concluída** (versão 0.4.0): simulado, nota TRI, revisão espaçada e plano de estudos (ADR 0013 a 0016).
+**Próximo passo:** decidir entre o instalador da edição Estudante (Fase 5, pré-requisito para alunos) e o modo escola (Fase 4). A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
 | Fase | Conteúdo | Status |
 |---|---|---|
 | 1 | Banco de questões 2009–2023, prática com filtros, cronômetro, motivo do erro, caderno de erros, painel | ✅ Concluída |
-| 2 | 2.1 simulado por dia, tempo e numeração oficiais ✅ · 2.2 nota TRI com parâmetros oficiais, validada ✅ · 2.3 revisão espaçada (1/3/7/21 dias, fáceis primeiro) ✅ · 2.4 plano de estudos ⏳ | ▶️ Em andamento |
+| 2 | 2.1 simulado por dia, tempo e numeração oficiais ✅ · 2.2 nota TRI com parâmetros oficiais, validada ✅ · 2.3 revisão espaçada (1/3/7/21 dias, fáceis primeiro) ✅ · 2.4 plano de estudos em ciclo ✅ | ✅ Concluída |
 | 3 | **Redação**: 3.1 temas desde 1998, editor pautado, cronômetro, linhas, salvamento ✅ · 3.2 autoavaliação pelas 5 competências e histórico ✅ · 3.3 correção por IA opcional ⏳ | ▶️ Em andamento |
 | 4 | **Modo escola** (prioridade do usuário): servir na rede local, alunos com login simples, painel do professor | ⏳ |
 | 5 | **Instalador `.exe` da edição Estudante** (pré-requisito real para alunos) com atualização em 1 clique; provas 2024/2025; classificação por assunto; Raspberry Pi | ⏳ |

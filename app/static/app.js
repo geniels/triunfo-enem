@@ -53,6 +53,7 @@ const rotas = {
   erros: telaErros,
   redacao: telaRedacao,
   simulado: telaSimulado,
+  plano: telaPlano,
   guia: telaGuia,
   config: telaConfig,
   questao: (id) => telaQuestaoAvulsa(Number(id)),
@@ -80,7 +81,9 @@ window.addEventListener("hashchange", navegar);
 /* ---------------------------- Início ---------------------------- */
 
 async function telaInicio() {
-  const [est, f, g, rev] = await Promise.all([api("/api/estatisticas"), filtros(), api("/api/guia"), api("/api/revisao")]);
+  const [est, f, g, rev, pl] = await Promise.all([
+    api("/api/estatisticas"), filtros(), api("/api/guia"), api("/api/revisao"), api("/api/plano"),
+  ]);
   const regras = g.secoes[0];
   const totalBanco = f.areas.reduce((s, a) => s + a.total, 0);
 
@@ -123,6 +126,11 @@ async function telaInicio() {
       <h1>Bons estudos!</h1>
       <p>${totalBanco.toLocaleString("pt-BR")} questões oficiais de ${f.anos.length} edições do ENEM (${Math.min(...f.anos)}–${Math.max(...f.anos)}), todas no seu computador.</p>
       <a class="botao grande" href="#praticar">Praticar agora</a>
+      <p class="resumo-plano">${
+        pl.configurado
+          ? `<a href="#plano">Seu plano</a>: ${pl.feitos.length} de ${pl.plano.ciclo.length} blocos nesta semana${pl.plano.dias >= 0 ? ` · faltam ${pl.plano.dias} dias` : ""}`
+          : `Ainda sem plano de estudos? <a href="#plano">Monte o seu em 1 minuto</a>.`
+      }</p>
     </section>
     ${
       rev.hoje
@@ -971,6 +979,122 @@ function resultadoSimulado(s) {
         .join("")}</div>
       <div class="acoes"><a class="botao" href="#simulado">Voltar aos simulados</a></div>
     </section>`;
+}
+
+/* ---------------------------- Plano de estudos (ADR 0016) ---------------------------- */
+
+const NOME_BLOCO = {
+  linguagens: "Linguagens",
+  "ciencias-humanas": "Ciências Humanas",
+  "ciencias-natureza": "Ciências da Natureza",
+  matematica: "Matemática",
+  redacao: "Redação",
+};
+
+async function telaPlano(arg) {
+  const p = await api("/api/plano");
+  if (!p.configurado || arg === "editar") return formularioPlano(p);
+  const { plano: pl, feitos } = p;
+  const feito = new Set(feitos);
+  const simulado =
+    pl.fase.simulados_por_semana === 1
+      ? "Um simulado completo por semana, no horário real (13h30)."
+      : pl.fase.simulados_por_semana
+        ? "Um simulado completo a cada duas semanas, aos domingos às 13h30."
+        : "";
+  conteudo.innerHTML = `
+    <section class="cartao">
+      <h1>${pl.dias >= 0 ? `Faltam ${pl.dias} ${pl.dias === 1 ? "dia" : "dias"} para a prova` : "A data da prova já passou"}</h1>
+      <p class="sub">Prova em ${dataCurta(p.data_prova)} · ${p.horas_semana} ${p.horas_semana === 1 ? "hora" : "horas"} por semana ·
+        <a href="#plano/editar">alterar</a></p>
+      ${pl.dias < 0 ? '<p class="aviso">Atualize a data para a próxima edição do ENEM.</p>' : ""}
+    </section>
+    <section class="cartao destaque">
+      <h2>Fase: ${esc(pl.fase.nome)}</h2>
+      <p>${esc(pl.fase.dica)}</p>
+    </section>
+    <section class="cartao">
+      <h2>Seu ciclo desta semana</h2>
+      <p class="sub">Cada bloco tem 50 minutos de estudo e 10 de pausa. Siga a ordem quando tiver tempo; perdeu um dia,
+        continue de onde parou. As áreas em que você mais erra ganham mais blocos.</p>
+      <p class="placar" id="pl-progresso"></p>
+      <ol class="ciclo" id="pl-ciclo">
+        ${pl.ciclo
+          .map(
+            (a, i) => `<li><label class="bloco ${a === "redacao" ? "" : CORES_AREA[a]}">
+              <input type="checkbox" data-i="${i}" ${feito.has(i) ? "checked" : ""}>
+              <span class="bolinha ${CORES_AREA[a] || ""}"></span>
+              <span class="nome">${NOME_BLOCO[a]}</span>
+              <a href="${a === "redacao" ? "#redacao" : "#praticar"}" data-area="${a}">${a === "redacao" ? "escrever (1h20)" : "praticar"}</a>
+            </label></li>`
+          )
+          .join("")}
+      </ol>
+      <h2 class="espaco">Também nesta semana</h2>
+      <ul>
+        <li><b>Todo dia:</b> a <a href="#inicio">Revisão do dia</a> (cerca de 15 minutos).</li>
+        ${simulado ? `<li><b>Simulado:</b> ${simulado} <a href="#simulado">Fazer simulado</a></li>` : ""}
+      </ul>
+    </section>`;
+
+  const progresso = () => {
+    $("#pl-progresso").textContent = `${feito.size} de ${pl.ciclo.length} blocos feitos nesta semana`;
+  };
+  progresso();
+  $("#pl-ciclo").onchange = async (e) => {
+    const i = +e.target.dataset.i;
+    e.target.checked ? feito.add(i) : feito.delete(i);
+    progresso();
+    await post("/api/plano/feito", { posicao: i, feito: e.target.checked });
+  };
+  $("#pl-ciclo").onclick = (e) => {
+    const link = e.target.closest("a[data-area]");
+    if (link && link.dataset.area !== "redacao") {
+      // Abre o Praticar já filtrado na área do bloco, com questões novas.
+      prefs.salvar({ ...prefs.ler(), area: link.dataset.area, modo: "novas" });
+      sessao = null;
+    }
+  };
+}
+
+function formularioPlano(p) {
+  conteudo.innerHTML = `
+    <section class="cartao config">
+      <h1>Montar meu plano</h1>
+      <p class="sub">Duas perguntas e o TRIunfo monta um ciclo de estudos para você, dando mais tempo às áreas em que
+        você mais erra. Dá para mudar quando quiser.</p>
+      <div class="campos">
+        <label>Data da prova (1º dia)
+          <input type="date" id="pl-data" value="${esc(p.data_prova || "")}" required>
+        </label>
+        <label>Horas de estudo por semana
+          <select id="pl-horas">
+            ${[3, 5, 8, 10, 12, 15, 20, 25, 30, 40].map((h) => `<option value="${h}">${h} horas</option>`).join("")}
+          </select>
+        </label>
+      </div>
+      <p class="sub">As datas do ENEM saem no edital, geralmente com a prova em novembro. Seja realista nas horas:
+        um plano que cabe na sua semana funciona melhor do que um plano perfeito que não é cumprido.</p>
+      <div class="acoes"><button class="botao" id="pl-salvar">Montar plano</button>
+        ${p.configurado ? '<a class="botao link" href="#plano">Cancelar</a>' : ""}</div>
+      <p class="aviso" id="pl-aviso" hidden></p>
+    </section>`;
+  $("#pl-horas").value = String(p.horas_semana || 10);
+  $("#pl-salvar").onclick = async () => {
+    const data = $("#pl-data").value;
+    if (!data) {
+      $("#pl-aviso").hidden = false;
+      $("#pl-aviso").textContent = "Escolha a data da prova.";
+      return;
+    }
+    await api("/api/plano", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ data_prova: data, horas_semana: +$("#pl-horas").value }),
+    });
+    if (location.hash === "#plano") navegar(); // mesma rota: o navegador não avisa a troca
+    else location.hash = "#plano";
+  };
 }
 
 /* ---------------------------- Guia da prova ---------------------------- */

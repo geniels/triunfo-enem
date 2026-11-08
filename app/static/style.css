@@ -308,3 +308,14 @@ details summary { cursor: pointer; font-weight: 600; margin: .5rem 0; }
 .nota-tri { font-size: 1.15rem; font-weight: 800; color: var(--primaria); }
 .revisao-dia { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .revisao-dia h2 { margin-bottom: .25rem; }
+
+/* Plano de estudos */
+.ciclo { list-style: none; padding: 0; margin: 0; display: grid; gap: .4rem; }
+.bloco { display: flex; align-items: center; gap: .6rem; padding: .6rem .8rem; border: 1px solid var(--linha);
+  border-radius: 10px; cursor: pointer; }
+.bloco input { width: 1.2rem; height: 1.2rem; accent-color: var(--primaria); }
+.bloco .nome { flex: 1; }
+.bloco:has(input:checked) .nome { text-decoration: line-through; color: var(--suave); }
+.resumo-plano { margin-top: 1rem; }
+input[type="date"] { font: inherit; padding: .5rem .7rem; border-radius: 8px; border: 1px solid var(--linha);
+  background: var(--cartao); color: var(--texto); }

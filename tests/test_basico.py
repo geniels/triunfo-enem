@@ -7,7 +7,7 @@ import unittest
 from datetime import date
 from pathlib import Path
 
-from app import guia, revisao, tri
+from app import guia, plano, revisao, tri
 from app.redacao import notas_validas
 from scripts.importar_enem_dev import area_oficial
 
@@ -74,6 +74,25 @@ class TestRevisao(unittest.TestCase):
         p = revisao.proxima
         self.assertEqual(p([("2026-11-01", False), ("2026-11-01", True)]), date(2026, 11, 2))
         self.assertEqual(p([("2026-11-01", False), ("2026-11-02", True), ("2026-11-05", False)]), date(2026, 11, 6))
+
+
+class TestPlano(unittest.TestCase):
+    def test_area_mais_fraca_recebe_mais_blocos_e_soma_fecha(self):
+        taxas = {"linguagens": 0.8, "ciencias-humanas": 0.7, "ciencias-natureza": 0.5, "matematica": 0.2}
+        p = plano.montar(10, date(2027, 11, 7), date(2026, 11, 8), taxas)
+        self.assertEqual(len(p["ciclo"]), 10)
+        self.assertEqual(p["ciclo"].count("redacao"), 1)
+        n = p["blocos_por_area"]
+        self.assertGreater(n["matematica"], n["linguagens"])
+        self.assertEqual(p["fase"]["nome"], "Base")
+
+    def test_intercala_e_fases(self):
+        p = plano.montar(5, date(2026, 11, 15), date(2026, 11, 8), {})
+        areas = [a for a in p["ciclo"] if a != "redacao"]
+        self.assertEqual(len(set(areas)), len(areas))  # 4 blocos, 4 áreas diferentes
+        self.assertEqual(p["fase"]["nome"], "Semana da prova")
+        self.assertEqual(plano.fase(20)["nome"], "Reta final")
+        self.assertEqual(plano.fase(60)["nome"], "Simulados")
 
 
 class TestAreaOficial(unittest.TestCase):

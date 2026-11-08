@@ -85,6 +85,19 @@ CREATE TABLE IF NOT EXISTS tri_escala (
     PRIMARY KEY (ano, area)
 );
 
+-- Plano de estudos (ADR 0016): configuração e blocos do ciclo marcados como feitos em cada semana.
+CREATE TABLE IF NOT EXISTS plano (
+    aluno_id      INTEGER PRIMARY KEY REFERENCES alunos(id),
+    data_prova    TEXT    NOT NULL,
+    horas_semana  INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS plano_feitos (
+    aluno_id  INTEGER NOT NULL REFERENCES alunos(id),
+    semana    TEXT    NOT NULL,   -- semana ISO, ex.: 2026-W45
+    posicao   INTEGER NOT NULL,   -- posição do bloco no ciclo
+    PRIMARY KEY (aluno_id, semana, posicao)
+);
+
 -- Simulado de um dia de prova de um ano, na ordem oficial (ADR 0013).
 CREATE TABLE IF NOT EXISTS simulados (
     id          INTEGER PRIMARY KEY,
