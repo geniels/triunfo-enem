@@ -13,7 +13,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import guia, redacao
+from app import guia, redacao, versao
 from app.db import AREAS, IMAGENS_DIR, RAIZ, conectar, criar_tabelas
 
 STATIC_DIR = RAIZ / "app" / "static"
@@ -23,7 +23,7 @@ con = conectar()
 criar_tabelas(con)
 IMAGENS_DIR.mkdir(parents=True, exist_ok=True)
 
-app = FastAPI(title="TRIunfo", version="0.1.0")
+app = FastAPI(title="TRIunfo", version=versao.VERSAO)
 
 
 @app.middleware("http")
@@ -47,6 +47,18 @@ def sincronizar_guia():
         raise HTTPException(503, "Não foi possível baixar (sem internet ou servidor fora do ar). O guia atual continua valendo.")
     except ValueError:  # inclui UnicodeDecodeError
         raise HTTPException(502, "O arquivo recebido não é um guia válido. Nada foi alterado.")
+
+
+@app.get("/api/versao")
+def verificar_versao(verificar: bool = False):
+    if not verificar:  # sem internet: só informa a versão instalada
+        return {"atual": versao.VERSAO}
+    try:
+        return versao.verificar()
+    except OSError:
+        raise HTTPException(503, "Não foi possível verificar a versão agora.")
+    except (ValueError, KeyError):
+        raise HTTPException(502, "Resposta inesperada ao verificar a versão.")
 
 
 def filtro_sql(area: str | None, ano: int | None, idioma: str) -> tuple[str, list]:

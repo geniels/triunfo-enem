@@ -18,6 +18,8 @@ playwright-cli open http://localhost:8000                # testar a interface (d
 ```
 
 ## Regras do projeto
+- Quem usa é estudante, sem conhecimento técnico: na edição Estudante, nada de terminal, chave ou configuração; erros dizem o que fazer (ADR 0010).
+- Nenhum dado de aluno vai para serviços que treinam com eles (LGPD, ADR 0011).
 - Sem CDN e sem build no frontend. Tudo precisa funcionar offline (ADR 0002).
 - O gabarito nunca vai ao navegador antes da resposta (ADR 0003).
 - Toda tela nova cumpre os requisitos de acessibilidade da ADR 0005; verifique com o playwright-cli antes de concluir.

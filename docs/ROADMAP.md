@@ -8,7 +8,7 @@ Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o
 Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em Configurações (ADR 0008). Revisão de código feita (agent-skills + ponytail).
 Aparência: tema claro, escuro ou automático e 4 cores de destaque, com engrenagem de Configurações no topo.
 **Fase 3 em andamento:** 3.1 (escrever) e 3.2 (autoavaliar) prontas (ADR 0009).
-**Próximo passo:** 3.3, correção por IA opcional; depois Fase 2 (simulado e TRI).
+**Próximo passo:** Fase 2 (simulado e TRI). A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -18,14 +18,18 @@ Aparência: tema claro, escuro ou automático e 4 cores de destaque, com engrena
 | 2 | Simulado completo (formato de 2 dias), estimativa TRI, revisão espaçada (1/3/7/21 dias), plano de estudos | ⏳ |
 | 3 | **Redação**: 3.1 temas desde 1998, editor pautado, cronômetro, linhas, salvamento ✅ · 3.2 autoavaliação pelas 5 competências e histórico ✅ · 3.3 correção por IA opcional ⏳ | ▶️ Em andamento |
 | 4 | **Modo escola** (prioridade do usuário): servir na rede local, alunos com login simples, painel do professor | ⏳ |
-| 5 | Provas 2024/2025 a partir dos PDFs do INEP; classificação por assunto; instalador `.exe`; Raspberry Pi | ⏳ |
+| 5 | **Instalador `.exe` da edição Estudante** (pré-requisito real para alunos) com atualização em 1 clique; provas 2024/2025; classificação por assunto; Raspberry Pi | ⏳ |
 
-## Decisões pendentes
-- **Atualização do app pelo botão:** hoje o botão atualiza só o conteúdo (guia). Para o código, a proposta é o botão avisar
-  "versão X disponível" e um `atualizar.bat` aplicar a atualização com conferência de integridade, em vez de o app
-  se reescrever sozinho (risco de segurança). Aguardando decisão do autor.
-- **IA na redação:** o PC-alvo tem 8 GB de RAM e não tem GPU. Um modelo local é lento e limitado; um modelo na
-  nuvem é melhor, mas exige internet e chave. Provavelmente as duas opções, ambas opcionais.
+## Decisões tomadas em 2026-11-08
+- **Duas edições** (ADR 0010): Estudante (zero administração) e Escola (configurada por um responsável).
+- **IA na redação** (ADR 0011): local por padrão, apontando o que revisar sem dar nota; online só na edição Escola,
+  com conta paga. Planos gratuitos que usam os dados para treino estão vetados (LGPD).
+- **Atualizações** (ADR 0012): botão único "Verificar atualizações"; o programa avisa sobre versão nova; aplicação em
+  1 clique virá com o instalador.
+
+## Pendências anotadas
+- **Medir a IA local no PC de referência** (i3-N305, 8 GB): tempo por redação, uso de memória e concordância com
+  redações de nota oficial conhecida. Pré-requisito da Fase 3.3.
 
 ## Pré-requisitos do modo escola (revisão de código, 2026-11-08)
 - **Uma conexão SQLite por requisição** (hoje há uma só, compartilhada entre threads; com vários alunos ao mesmo tempo,

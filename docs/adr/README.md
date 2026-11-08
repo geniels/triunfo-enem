@@ -17,6 +17,9 @@ sem precisar redescobrir por que as coisas são como são.
 | [0007](0007-nome-triunfo.md) | Nome do programa: TRIunfo | Aceita |
 | [0008](0008-guia-sincronizavel.md) | Guia da prova em Markdown, sincronizável sob demanda | Aceita |
 | [0009](0009-redacao-autoavaliacao.md) | Redação: escrita cronometrada e autoavaliação guiada | Aceita |
+| [0010](0010-edicoes-estudante-e-escola.md) | Duas edições: Estudante e Escola | Aceita |
+| [0011](0011-ia-na-redacao.md) | IA na redação: local por padrão; online só com conta paga da escola | Aceita |
+| [0012](0012-atualizacoes.md) | Atualizações: conteúdo pelo botão, programa com aviso e instalação verificada | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

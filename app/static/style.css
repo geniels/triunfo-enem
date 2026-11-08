@@ -283,3 +283,4 @@ details summary { cursor: pointer; font-weight: 600; margin: .5rem 0; }
   margin-right: .35rem; border: 2px solid var(--cartao); outline: 1px solid var(--linha); }
 
 .perigo { color: var(--nao) !important; }
+.destaque-aviso { background: var(--fundo); border-left: 5px solid var(--primaria); margin-top: .5rem; }

@@ -723,7 +723,7 @@ async function telaGuia() {
 /* ---------------------------- Configurações ---------------------------- */
 
 async function telaConfig() {
-  const g = await api("/api/guia");
+  const [g, v] = await Promise.all([api("/api/guia"), api("/api/versao")]);
   const atual = window.aparencia({});
   const TEMAS = { auto: "Automático (igual ao sistema)", claro: "Claro", escuro: "Escuro" };
   const CORES = { azul: "#1f5fd1", roxo: "#6d28d9", verde: "#047857", laranja: "#c2410c" };
@@ -740,12 +740,11 @@ async function telaConfig() {
       <p class="sub">A escolha fica salva neste aparelho.</p>
     </section>
     <section class="cartao">
-      <h2>Guia da prova</h2>
-      <p>Regras de: <b>${esc(g.edital)}</b><br>Versão ${esc(g.versao)}
-        (${g.origem === "sincronizado" ? "baixada da internet" : "a que veio com o TRIunfo"}).</p>
-      <p class="sub">O TRIunfo funciona sem internet. Quando sair um edital novo, conecte-se e toque abaixo:
-        só o guia é baixado (alguns KB), e só se houver versão mais nova.</p>
-      <div class="acoes"><button class="botao" id="sincronizar">Verificar atualização</button></div>
+      <h2>Atualizações</h2>
+      <p>TRIunfo versão <b>${esc(v.atual)}</b><br>Regras do guia: <b>${esc(g.edital)}</b> (versão ${esc(g.versao)})</p>
+      <p class="sub">O TRIunfo funciona sem internet. De vez em quando, conectado, toque abaixo: o guia da prova é
+        atualizado na hora (alguns KB) e você fica sabendo se existe uma versão nova do programa.</p>
+      <div class="acoes"><button class="botao" id="sincronizar">Verificar atualizações</button></div>
       <div id="resultado" aria-live="polite"></div>
     </section>`;
 
@@ -766,17 +765,21 @@ async function telaConfig() {
     const saida = $("#resultado");
     botao.disabled = true;
     saida.innerHTML = '<p class="carregando">Verificando…</p>';
-    const r = await fetch("/api/guia/sincronizar", { method: "POST" });
-    const dados = await r.json().catch(() => ({}));
+    const pedir = (url, opcoes) =>
+      fetch(url, opcoes).then(async (r) => ({ ok: r.ok, dados: await r.json().catch(() => ({})) }));
+    const [gr, vr] = await Promise.all([pedir("/api/guia/sincronizar", { method: "POST" }), pedir("/api/versao?verificar=1")]);
     botao.disabled = false;
-    if (!r.ok) {
-      saida.innerHTML = `<div class="retorno nao">${esc(dados.detail || "Não foi possível verificar agora.")}</div>`;
-    } else if (dados.atualizado) {
-      saida.innerHTML = `<div class="retorno ok"><b>Guia atualizado!</b> Agora com as regras do ${esc(dados.edital)}.
-        <a href="#guia">Ver as regras</a></div>`;
-    } else {
-      saida.innerHTML = `<div class="retorno ok">Você já tem a versão mais nova (${esc(dados.versao)}).</div>`;
-    }
+    const linhas = [];
+    if (!gr.ok) linhas.push(`<div class="retorno nao">${esc(gr.dados.detail || "Não foi possível verificar o guia agora.")}</div>`);
+    else if (gr.dados.atualizado)
+      linhas.push(`<div class="retorno ok"><b>Guia atualizado!</b> Agora com as regras do ${esc(gr.dados.edital)}. <a href="#guia">Ver as regras</a></div>`);
+    else linhas.push(`<div class="retorno ok">Guia da prova: você já tem a versão mais nova.</div>`);
+    if (vr.ok && vr.dados.nova)
+      linhas.push(`<div class="retorno destaque-aviso"><b>Nova versão do TRIunfo: ${esc(vr.dados.nova)}.</b>
+        <a href="${esc(vr.dados.url)}" target="_blank" rel="noopener">Veja o que mudou e como atualizar</a>.
+        Na escola, avise o professor ou o responsável pelo laboratório.</div>`);
+    else if (vr.ok) linhas.push(`<div class="retorno ok">Programa: você já tem a versão mais nova (${esc(vr.dados.atual)}).</div>`);
+    saida.innerHTML = linhas.join("");
   };
 }
 
