@@ -52,6 +52,7 @@ const rotas = {
   praticar: telaPraticar,
   erros: telaErros,
   redacao: telaRedacao,
+  simulado: telaSimulado,
   guia: telaGuia,
   config: telaConfig,
   questao: (id) => telaQuestaoAvulsa(Number(id)),
@@ -260,18 +261,35 @@ function mostrarQuestaoDaSessao() {
 
 async function telaQuestaoAvulsa(id) {
   const q = await api("/api/questao/" + id);
-  renderizarQuestao(q, { placar: "Revisando questão do caderno de erros", voltar: "#erros" });
+  renderizarQuestao(q, { placar: "Revisando questão", voltar: "#erros" });
 }
 
 /* ---------------------------- Questão ---------------------------- */
+
+// Texto, imagens, enunciado e alternativas: usado na prática e no simulado.
+function corpoQuestao(q) {
+  const textoTodo = (q.contexto || "") + (q.introducao || "");
+  const extras = q.arquivos.filter((a) => !textoTodo.includes(a));
+  return `
+      <div class="texto">${markdown(q.contexto)}</div>
+      ${extras.map((a) => `<img src="${esc(a)}" alt="Imagem da questão" loading="lazy">`).join("")}
+      <div class="enunciado">${markdown(q.introducao)}</div>
+      <ol class="alternativas" id="alternativas">
+        ${q.alternativas
+          .map(
+            (a) => `<li><button type="button" data-letra="${esc(a.letra)}">
+              <span class="letra">${esc(a.letra)}</span>
+              <span class="alt-texto">${a.texto ? markdown(a.texto) : ""}${a.arquivo ? `<img src="${esc(a.arquivo)}" alt="Alternativa ${esc(a.letra)}">` : ""}</span>
+            </button></li>`
+          )
+          .join("")}
+      </ol>`;
+}
 
 function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }) {
   const inicio = Date.now();
   let escolhida = null;
   let respondida = false;
-
-  const textoTodo = (q.contexto || "") + (q.introducao || "");
-  const extras = q.arquivos.filter((a) => !textoTodo.includes(a));
 
   conteudo.innerHTML = `
     <div class="barra-questao">
@@ -282,20 +300,7 @@ function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }
     <p class="placar">${esc(placar)}</p>
 
     <article class="cartao questao">
-      <div class="texto">${markdown(q.contexto)}</div>
-      ${extras.map((a) => `<img src="${esc(a)}" alt="Imagem da questão" loading="lazy">`).join("")}
-      <div class="enunciado">${markdown(q.introducao)}</div>
-
-      <ol class="alternativas" id="alternativas">
-        ${q.alternativas
-          .map(
-            (a) => `<li><button type="button" data-letra="${a.letra}">
-              <span class="letra">${a.letra}</span>
-              <span class="alt-texto">${a.texto ? markdown(a.texto) : ""}${a.arquivo ? `<img src="${esc(a.arquivo)}" alt="Alternativa ${a.letra}">` : ""}</span>
-            </button></li>`
-          )
-          .join("")}
-      </ol>
+      ${corpoQuestao(q)}
 
       <div id="retorno" aria-live="polite"></div>
       <div class="acoes" id="acoes">
@@ -689,6 +694,253 @@ function avaliarRedacao(r, c) {
   ligarApagar(r.id);
   limparTela = () => (conteudo.onchange = null);
   atualizarTotal();
+}
+
+/* ---------------------------- Simulado (ADR 0013) ---------------------------- */
+
+const NOME_DIA = {
+  1: "1º dia: Linguagens e Ciências Humanas",
+  2: "2º dia: Ciências da Natureza e Matemática",
+};
+const relogio = (s) =>
+  `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+
+async function telaSimulado(id) {
+  if (id) return abrirSimulado(Number(id));
+  const [f, lista] = await Promise.all([filtros(), api("/api/simulados")]);
+  const p = prefs.ler();
+  conteudo.innerHTML = `
+    <section class="cartao config">
+      <h1>Simulado</h1>
+      <p class="sub">Um dia de prova inteiro de um ano, na ordem oficial e com o tempo oficial. Treine o ritmo, a técnica
+        das duas passadas e o preenchimento do cartão-resposta. O gabarito só aparece quando você entregar.</p>
+      <div class="campos">
+        <label>Ano da prova
+          <select id="s-ano">${f.anos.map((a) => `<option>${a}</option>`).join("")}</select>
+        </label>
+        <label>Dia
+          <select id="s-dia">
+            <option value="1">${NOME_DIA[1]} (90 questões, 5h30)</option>
+            <option value="2">${NOME_DIA[2]} (90 questões, 5h)</option>
+          </select>
+        </label>
+        <label>Língua estrangeira
+          <select id="s-idioma"><option value="ingles">Inglês</option><option value="espanhol">Espanhol</option></select>
+        </label>
+      </div>
+      <p class="sub">No 1º dia, as 5h30 incluem a redação: reserve cerca de 1h20 e escreva na aba
+        <a href="#redacao">Redação</a> com o tema do mesmo ano.</p>
+      <div class="acoes"><button class="botao grande" id="s-comecar">Começar simulado</button></div>
+    </section>
+    <section class="cartao">
+      <h2>Seus simulados</h2>
+      ${
+        lista.length
+          ? `<ul class="lista-redacoes">${lista
+              .map(
+                (s) => `<li><a href="#simulado/${s.id}"><b>ENEM ${s.ano} · ${NOME_DIA[s.dia]}</b>
+                  <span>${dataCurta(s.criado_em)} · ${
+                    s.entregue
+                      ? `<b>${s.acertos}</b> acertos de ${s.total} · ${relogio(s.tempo_seg)}`
+                      : `em andamento: ${s.respondidas} de ${s.total} respondidas`
+                  }</span></a></li>`
+              )
+              .join("")}</ul>`
+          : "<p class='vazio'>Nenhum ainda. Que tal reservar um domingo à tarde, das 13h30 em diante, como no dia da prova?</p>"
+      }
+    </section>`;
+  $("#s-idioma").value = p.idioma || "ingles";
+  $("#s-comecar").onclick = async () => {
+    const r = await post("/api/simulados", { ano: +$("#s-ano").value, dia: +$("#s-dia").value, idioma: $("#s-idioma").value });
+    location.hash = `#simulado/${r.id}`;
+  };
+}
+
+async function abrirSimulado(id) {
+  const s = await api(`/api/simulados/${id}`);
+  return s.entregue ? resultadoSimulado(s) : fazerSimulado(s);
+}
+
+function fazerSimulado(s) {
+  const cache = {}; // questões já baixadas
+  const buscar = (qid) => (cache[qid] ??= api(`/api/questao/${qid}`));
+  const marcadas = new Set(s.marcadas);
+  let atual = Math.max(0, s.questoes.findIndex((q) => !s.respostas[q])); // primeira sem resposta
+  const inicio = Date.now() - s.tempo_seg * 1000;
+  const decorrido = () => Math.floor((Date.now() - inicio) / 1000);
+
+  conteudo.innerHTML = `
+    <div class="barra-questao">
+      <span class="etiqueta area-mat">Simulado</span>
+      <span>ENEM ${s.ano} · ${NOME_DIA[s.dia]}</span>
+      <span class="cronometro" id="cronometro" role="timer" aria-label="Tempo restante"></span>
+    </div>
+    <p class="placar" id="s-progresso"></p>
+    <div class="simulado">
+      <article class="cartao questao" id="s-questao"><p class="carregando">Carregando…</p></article>
+      <aside class="cartao cartao-resposta" aria-label="Cartão-resposta">
+        <h2>Cartão-resposta</h2>
+        <div class="grade-cartao" id="s-grade"></div>
+        <p class="legenda"><span class="q respondida">1</span> respondida <span class="q marcada">2</span> marcada para revisar</p>
+        <button class="botao" id="s-entregar">Entregar simulado</button>
+        <p id="s-aviso" class="sub" aria-live="polite"></p>
+      </aside>
+    </div>
+    <p class="atalhos">Atalhos: <kbd>A</kbd>–<kbd>E</kbd> respondem, <kbd>←</kbd> <kbd>→</kbd> mudam de questão,
+      <kbd>M</kbd> marca para revisar.</p>`;
+
+  const salvar = (corpo) =>
+    s.entregue
+      ? Promise.resolve()
+      : patch(`/api/simulados/${s.id}`, { tempo_seg: decorrido(), ...corpo }).catch(() => {
+          const aviso = $("#s-aviso");
+          if (aviso) aviso.textContent = "Não foi possível salvar agora; tente de novo.";
+        });
+
+  function atualizarGrade() {
+    const n = Object.keys(s.respostas).length;
+    $("#s-progresso").textContent = `${n} de ${s.questoes.length} respondidas · ${marcadas.size} marcadas para revisar`;
+    $("#s-grade").innerHTML = s.questoes
+      .map((qid, i) => {
+        const estado = [s.respostas[qid] && "respondida", marcadas.has(qid) && "marcada", i === atual && "atual"].filter(Boolean);
+        return `<button type="button" class="q ${estado.join(" ")}" data-i="${i}"
+          aria-label="Questão ${s.numeros[i]}${s.respostas[qid] ? ", resposta " + s.respostas[qid] : ", em branco"}${marcadas.has(qid) ? ", marcada" : ""}"
+          ${i === atual ? 'aria-current="true"' : ""}>${s.numeros[i]}</button>`;
+      })
+      .join("");
+  }
+
+  async function mostrar(i) {
+    atual = Math.min(Math.max(i, 0), s.questoes.length - 1);
+    const qid = s.questoes[atual];
+    atualizarGrade();
+    const q = await buscar(qid);
+    if (s.questoes[atual] !== qid) return; // o aluno já mudou de questão enquanto carregava
+    $("#s-questao").innerHTML = `
+      <p class="placar"><b>Questão ${q.indice}</b> · ${esc(q.area_nome.replace(" e suas Tecnologias", ""))}</p>
+      ${corpoQuestao(q)}
+      <div class="acoes">
+        <button class="botao secundario" id="s-anterior" ${atual === 0 ? "disabled" : ""}>← Anterior</button>
+        <button class="botao secundario" id="s-marcar" aria-pressed="${marcadas.has(qid)}">${marcadas.has(qid) ? "Desmarcar revisão" : "Marcar para revisar"}</button>
+        <button class="botao" id="s-proxima" ${atual === s.questoes.length - 1 ? "disabled" : ""}>Próxima →</button>
+      </div>`;
+    $("#alternativas").querySelectorAll("button").forEach((b) => b.classList.toggle("escolhida", b.dataset.letra === s.respostas[qid]));
+    $("#alternativas").onclick = (e) => {
+      const b = e.target.closest("button");
+      if (b) responder(b.dataset.letra);
+    };
+    $("#s-anterior").onclick = () => mostrar(atual - 1);
+    $("#s-proxima").onclick = () => mostrar(atual + 1);
+    $("#s-marcar").onclick = alternarMarca;
+    if (q.alternativas.length < 5) $("#s-questao").insertAdjacentHTML("beforeend", '<p class="sub">Esta questão veio da fonte com menos de 5 alternativas.</p>');
+    buscar(s.questoes[atual + 1] ?? qid); // adianta a próxima
+  }
+
+  function responder(letra) {
+    const qid = s.questoes[atual];
+    const nova = s.respostas[qid] === letra ? null : letra; // tocar de novo apaga
+    if (nova) s.respostas[qid] = nova;
+    else delete s.respostas[qid];
+    $("#alternativas").querySelectorAll("button").forEach((b) => b.classList.toggle("escolhida", b.dataset.letra === nova));
+    atualizarGrade();
+    salvar({ respostas: { [qid]: nova } });
+  }
+
+  function alternarMarca() {
+    const qid = s.questoes[atual];
+    marcadas.has(qid) ? marcadas.delete(qid) : marcadas.add(qid);
+    salvar({ marcadas: [...marcadas] });
+    mostrar(atual);
+  }
+
+  $("#s-grade").onclick = (e) => {
+    const b = e.target.closest("button");
+    if (b) mostrar(+b.dataset.i);
+  };
+  const entregar = $("#s-entregar");
+  entregar.onclick = async () => {
+    const brancos = s.questoes.length - Object.keys(s.respostas).length;
+    if (!entregar.dataset.confirmar) {
+      entregar.dataset.confirmar = "1";
+      entregar.textContent = "Confirmar entrega";
+      $("#s-aviso").textContent = brancos
+        ? `Você deixou ${brancos} em branco. No ENEM não há desconto por erro: vale chutar com consciência antes de entregar.`
+        : "Tudo respondido. Clique de novo para entregar.";
+      return;
+    }
+    await patch(`/api/simulados/${s.id}`, { tempo_seg: decorrido() });
+    await post(`/api/simulados/${s.id}/entregar`, {});
+    s.entregue = 1; // nada mais a salvar ao sair da tela
+    navegar();
+  };
+
+  const cron = $("#cronometro");
+  const tique = () => {
+    const resta = s.duracao_seg - decorrido();
+    cron.textContent = resta > 0 ? relogio(resta) : "Tempo esgotado";
+    cron.classList.toggle("estourou", resta <= 30 * 60);
+  };
+  tique();
+  const t1 = setInterval(tique, 1000);
+  const t2 = setInterval(() => salvar({}), 30000); // guarda o tempo de prova
+
+  function teclado(e) {
+    if (e.target.matches("input, select, textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key.toUpperCase();
+    if (k.length === 1 && "ABCDE".includes(k)) responder(k);
+    else if (e.key === "ArrowRight") mostrar(atual + 1);
+    else if (e.key === "ArrowLeft") mostrar(atual - 1);
+    else if (k === "M") alternarMarca();
+  }
+  document.addEventListener("keydown", teclado);
+  limparTela = () => {
+    clearInterval(t1);
+    clearInterval(t2);
+    document.removeEventListener("keydown", teclado);
+    salvar({});
+  };
+  mostrar(atual);
+}
+
+function resultadoSimulado(s) {
+  const { areas, itens } = s.resultado;
+  const acertos = areas.reduce((n, a) => n + a.acertos, 0);
+  const brancos = areas.reduce((n, a) => n + a.brancos, 0);
+  conteudo.innerHTML = `
+    <section class="cartao">
+      <h1>Resultado do simulado</h1>
+      <p class="sub">ENEM ${s.ano} · ${NOME_DIA[s.dia]} · ${relogio(s.tempo_seg)} de prova (limite ${relogio(s.duracao_seg)})</p>
+      <section class="numeros">
+        <div class="numero"><b>${acertos}</b><span>acertos de ${itens.length}</span></div>
+        <div class="numero"><b>${itens.length - acertos - brancos}</b><span>erros</span></div>
+        <div class="numero"><b>${brancos}</b><span>em branco</span></div>
+      </section>
+      ${areas
+        .map(
+          (a) => `<div class="linha-area">
+            <div class="linha-area-topo"><span class="bolinha ${CORES_AREA[a.area]}"></span>
+              <span class="nome">${esc(a.nome.replace(" e suas Tecnologias", ""))}</span>
+              <span class="valor">${a.acertos}/${a.total}</span></div>
+            <div class="barra"><div class="barra-cheia ${CORES_AREA[a.area]}" style="width:${(100 * a.acertos) / a.total}%"></div></div>
+          </div>`
+        )
+        .join("")}
+      <p class="sub">A nota TRI estimada vai aparecer aqui quando o TRIunfo tiver os parâmetros oficiais das questões
+        (em desenvolvimento). Seus erros já estão no <a href="#erros">caderno de erros</a>.</p>
+    </section>
+    <section class="cartao">
+      <h2>Questão por questão</h2>
+      <p class="legenda"><span class="q certa">1</span> certa <span class="q errada">2</span> errada <span class="q">3</span> em branco ·
+        toque numa questão para revê-la</p>
+      <div class="grade-cartao">${itens
+        .map((it, i) => {
+          const estado = !it.resposta ? "" : it.resposta === it.gabarito ? "certa" : "errada";
+          const rotulo = !it.resposta ? "em branco" : estado === "certa" ? "certa" : `errada, marcou ${it.resposta}`;
+          return `<a class="q ${estado}" href="#questao/${it.id}" aria-label="Questão ${it.indice}: ${rotulo}, gabarito ${esc(it.gabarito)}">${it.indice}</a>`;
+        })
+        .join("")}</div>
+      <div class="acoes"><a class="botao" href="#simulado">Voltar aos simulados</a></div>
+    </section>`;
 }
 
 /* ---------------------------- Guia da prova ---------------------------- */

@@ -20,6 +20,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0010](0010-edicoes-estudante-e-escola.md) | Duas edições: Estudante e Escola | Aceita |
 | [0011](0011-ia-na-redacao.md) | IA na redação: local por padrão; online só com conta paga da escola | Aceita |
 | [0012](0012-atualizacoes.md) | Atualizações: conteúdo pelo botão, programa com aviso e instalação verificada | Aceita |
+| [0013](0013-simulado.md) | Simulado por dia de prova, na ordem e no tempo oficiais | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

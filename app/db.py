@@ -71,6 +71,20 @@ CREATE TABLE IF NOT EXISTS redacoes (
     criado_em      TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
     atualizado_em  TEXT
 );
+
+-- Simulado de um dia de prova de um ano, na ordem oficial (ADR 0013).
+CREATE TABLE IF NOT EXISTS simulados (
+    id          INTEGER PRIMARY KEY,
+    aluno_id    INTEGER NOT NULL DEFAULT 1 REFERENCES alunos(id),
+    ano         INTEGER NOT NULL,
+    dia         INTEGER NOT NULL CHECK (dia IN (1, 2)),
+    idioma      TEXT    NOT NULL DEFAULT 'ingles',
+    respostas   TEXT    NOT NULL DEFAULT '{}',  -- JSON {questao_id: "A".."E"}
+    marcadas    TEXT    NOT NULL DEFAULT '[]',  -- JSON [questao_id] para revisar (2ª passada)
+    tempo_seg   INTEGER NOT NULL DEFAULT 0,
+    entregue    INTEGER NOT NULL DEFAULT 0,
+    criado_em   TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
+);
 """
 
 

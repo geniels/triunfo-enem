@@ -316,6 +316,138 @@ def apagar_redacao(rid: int):
     return {"ok": True}
 
 
+# ---------------------------- Simulado (ADR 0013) ----------------------------
+
+DURACAO_SEG = {1: 330 * 60, 2: 300 * 60}  # edital 3.3: 5h30 no 1º dia (com redação), 5h no 2º
+Letra = Literal["A", "B", "C", "D", "E"]
+
+
+class NovoSimulado(BaseModel):
+    ano: int = Field(ge=2009, le=2100)
+    dia: Literal[1, 2]
+    idioma: Literal["ingles", "espanhol"] = "ingles"
+
+
+class AtualizaSimulado(BaseModel):
+    respostas: dict[int, Letra | None] | None = None  # junta com as salvas; None apaga a resposta
+    marcadas: list[int] | None = None
+    tempo_seg: int | None = Field(default=None, ge=0)
+
+
+def _questoes_do_dia(ano: int, dia: int, idioma: str) -> list[tuple[int, int]]:
+    """(id, número oficial), na ordem oficial: o 1º dia vai da questão 1 à 90 e o 2º da 91 à 180, em todos os anos."""
+    inicio = 1 if dia == 1 else 91
+    return [
+        (r[0], r[1])
+        for r in con.execute(
+            "SELECT id, indice FROM questoes WHERE ano = ? AND indice BETWEEN ? AND ? AND (idioma = '' OR idioma = ?) "
+            "ORDER BY indice",
+            (ano, inicio, inicio + 89, idioma),
+        )
+    ]
+
+
+def _resultado(s: dict) -> dict:
+    ids = s["questoes"]
+    rows = con.execute(
+        f"SELECT id, indice, area, gabarito FROM questoes WHERE id IN ({','.join('?' * len(ids))}) ORDER BY indice",
+        ids,
+    ).fetchall()
+    areas, itens = {}, []
+    for r in rows:
+        resposta = s["respostas"].get(str(r["id"]))
+        a = areas.setdefault(r["area"], {"area": r["area"], "nome": AREAS[r["area"]], "total": 0, "acertos": 0, "brancos": 0})
+        a["total"] += 1
+        a["brancos"] += resposta is None
+        a["acertos"] += resposta == r["gabarito"]
+        itens.append({"id": r["id"], "indice": r["indice"], "area": r["area"], "resposta": resposta, "gabarito": r["gabarito"]})
+    return {"areas": list(areas.values()), "itens": itens}
+
+
+def _simulado(sid: int) -> dict:
+    row = con.execute("SELECT * FROM simulados WHERE id = ? AND aluno_id = ?", (sid, ALUNO_PADRAO)).fetchone()
+    if not row:
+        raise HTTPException(404, "Simulado não encontrado")
+    s = dict(row) | {"respostas": json.loads(row["respostas"]), "marcadas": json.loads(row["marcadas"])}
+    pares = _questoes_do_dia(s["ano"], s["dia"], s["idioma"])
+    s["questoes"] = [qid for qid, _ in pares]
+    s["numeros"] = [n for _, n in pares]  # numeração oficial, igual à do caderno
+    s["duracao_seg"] = DURACAO_SEG[s["dia"]]
+    if s["entregue"]:  # o gabarito só sai depois da entrega
+        s["resultado"] = _resultado(s)
+    return s
+
+
+@app.get("/api/simulados")
+def listar_simulados():
+    ids = [r[0] for r in con.execute("SELECT id FROM simulados WHERE aluno_id = ? ORDER BY id DESC", (ALUNO_PADRAO,))]
+    lista = []
+    for sid in ids:
+        s = _simulado(sid)
+        acertos = sum(a["acertos"] for a in s["resultado"]["areas"]) if s["entregue"] else None
+        lista.append({k: s[k] for k in ("id", "ano", "dia", "entregue", "criado_em", "tempo_seg")}
+                     | {"total": len(s["questoes"]), "respondidas": len(s["respostas"]), "acertos": acertos})
+    return lista
+
+
+@app.post("/api/simulados")
+def criar_simulado(n: NovoSimulado):
+    if not _questoes_do_dia(n.ano, n.dia, n.idioma):
+        raise HTTPException(404, "Não há questões desse ano e dia no banco.")
+    with con:
+        sid = con.execute(
+            "INSERT INTO simulados (aluno_id, ano, dia, idioma) VALUES (?, ?, ?, ?) RETURNING id",
+            (ALUNO_PADRAO, n.ano, n.dia, n.idioma),
+        ).fetchone()[0]
+    return {"id": sid}
+
+
+@app.get("/api/simulados/{sid}")
+def abrir_simulado(sid: int):
+    return _simulado(sid)
+
+
+@app.patch("/api/simulados/{sid}")
+def atualizar_simulado(sid: int, a: AtualizaSimulado):
+    s = _simulado(sid)
+    if s["entregue"]:
+        raise HTTPException(409, "Este simulado já foi entregue.")
+    validas = set(s["questoes"])
+    if a.respostas:
+        if not set(a.respostas) <= validas:
+            raise HTTPException(422, "Questão que não faz parte deste simulado.")
+        for qid, letra in a.respostas.items():
+            if letra is None:
+                s["respostas"].pop(str(qid), None)
+            else:
+                s["respostas"][str(qid)] = letra
+    if a.marcadas is not None:
+        s["marcadas"] = sorted(set(a.marcadas) & validas)
+    with con:
+        con.execute(
+            "UPDATE simulados SET respostas = ?, marcadas = ?, tempo_seg = COALESCE(?, tempo_seg) WHERE id = ?",
+            (json.dumps(s["respostas"]), json.dumps(s["marcadas"]), a.tempo_seg, sid),
+        )
+    return {"ok": True}
+
+
+@app.post("/api/simulados/{sid}/entregar")
+def entregar_simulado(sid: int):
+    s = _simulado(sid)
+    if s["entregue"]:
+        raise HTTPException(409, "Este simulado já foi entregue.")
+    with con:
+        con.execute("UPDATE simulados SET entregue = 1 WHERE id = ?", (sid,))
+        # As respostas entram no histórico: erros vão para o caderno de erros e para o painel.
+        for item in _resultado(s)["itens"]:
+            if item["resposta"]:
+                con.execute(
+                    "INSERT INTO respostas (aluno_id, questao_id, alternativa, correta) VALUES (?, ?, ?, ?)",
+                    (ALUNO_PADRAO, item["id"], item["resposta"], int(item["resposta"] == item["gabarito"])),
+                )
+    return _simulado(sid)
+
+
 app.mount("/imagens", StaticFiles(directory=IMAGENS_DIR), name="imagens")
 app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
