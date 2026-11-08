@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ENEM Estudo</title>
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header class="topo">
+    <a class="marca" href="#inicio">ENEM <b>Estudo</b></a>
+    <nav>
+      <a href="#inicio" data-rota="inicio">Início</a>
+      <a href="#praticar" data-rota="praticar">Praticar</a>
+      <a href="#erros" data-rota="erros">Caderno de erros</a>
+      <a href="#redacao" data-rota="redacao">Redação</a>
+    </nav>
+  </header>
+
+  <main id="conteudo" class="conteudo" aria-live="polite"></main>
+
+  <footer class="rodape">
+    Questões das provas oficiais do INEP, via projeto aberto <a href="https://enem.dev" target="_blank" rel="noopener">enem.dev</a>.
+    Funciona offline.
+  </footer>
+
+  <script src="/static/markdown.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

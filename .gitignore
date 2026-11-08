@@ -1,0 +1,12 @@
+# Ambiente Python
+.venv/
+__pycache__/
+*.pyc
+
+# Dados gerados localmente (questões baixadas, imagens e respostas do aluno)
+data/
+
+# Sistema
+.DS_Store
+Thumbs.db
+.vscode/
