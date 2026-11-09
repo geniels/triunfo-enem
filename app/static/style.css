@@ -5,8 +5,10 @@
   --suave: #5f6879;
   --linha: #e1e4ea;
   /* Cor de destaque: um tom para o tema claro e outro para o escuro, ambos com contraste >= 4,5:1 */
-  --p-claro: #1f5fd1;
-  --p-escuro: #5b8ff0;
+  --p-claro: #1f4fb8;  /* azul do caderno de prova */
+  --p-escuro: #6b9bf5;
+  --ouro: #ffc61a;     /* troféu: só como fundo, com texto escuro (contraste) */
+  --ouro-texto: #2a1d00;
   --primaria: var(--p-claro);
   --primaria-texto: #ffffff;
   --ok: #157a3f;
@@ -64,8 +66,12 @@ h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
   padding: .75rem max(16px, calc((100% - 928px) / 2));
   background: var(--cartao); border-bottom: 1px solid var(--linha);
 }
-.marca { font-size: 1.15rem; text-decoration: none; color: var(--texto); }
+.marca { display: flex; align-items: center; gap: .5rem; font-size: 1.25rem; text-decoration: none; color: var(--texto); }
 .marca b { color: var(--primaria); }
+.marca img { display: block; }
+/* Faixa com as cores dos cadernos do ENEM (azul, amarelo, branco, rosa) */
+.topo::after { content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 4px;
+  background: linear-gradient(90deg, #1f4fb8 0 25%, #ffc61a 25% 50%, #dfe3ea 50% 75%, #f39cc0 75%); }
 nav { display: flex; flex-wrap: wrap; gap: .25rem; }
 nav a { padding: .35rem .7rem; border-radius: 999px; text-decoration: none; color: var(--suave); }
 nav a:hover { background: var(--fundo); }
@@ -305,7 +311,7 @@ details summary { cursor: pointer; font-weight: 600; margin: .5rem 0; }
 }
 .q.certa::after { content: " ✓"; font-size: .75em; }
 .q.errada::after { content: " ✗"; font-size: .75em; }
-.nota-tri { font-size: 1.15rem; font-weight: 800; color: var(--primaria); }
+.nota-tri { font-size: 1.1rem; font-weight: 800; background: var(--ouro); color: var(--ouro-texto); padding: .05rem .5rem; border-radius: 6px; }
 .revisao-dia { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: 1rem; }
 .revisao-dia h2 { margin-bottom: .25rem; }
 
@@ -319,3 +325,10 @@ details summary { cursor: pointer; font-weight: 600; margin: .5rem 0; }
 .resumo-plano { margin-top: 1rem; }
 input[type="date"] { font: inherit; padding: .5rem .7rem; border-radius: 8px; border: 1px solid var(--linha);
   background: var(--cartao); color: var(--texto); }
+
+/* Identidade "de prova" (ADR 0020) */
+.letra { width: 2.3rem; height: 1.7rem; border-radius: 50%; }  /* bolinha oval do cartão-resposta */
+.hero { display: flex; align-items: center; gap: 1.25rem; }
+.hero img { flex: none; width: 96px; height: 96px; }
+.hero h1 { font-size: 2rem; }
+@media (max-width: 520px) { .hero img { width: 64px; height: 64px; } .hero h1 { font-size: 1.5rem; } }

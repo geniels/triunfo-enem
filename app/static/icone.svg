@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="TRIunfo: troféu com capelo">
+  <!-- Fundo: azul do caderno de prova -->
+  <rect x="8" y="8" width="240" height="240" rx="56" fill="#1f4fb8"/>
+  <!-- Alças do troféu -->
+  <path d="M84 118 H62 C56 146 70 164 96 166" fill="none" stroke="#f2a900" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M172 118 H194 C200 146 186 164 160 166" fill="none" stroke="#f2a900" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Taça -->
+  <path d="M80 104 H176 V126 C176 160 156 182 128 182 C100 182 80 160 80 126 Z" fill="#ffc61a"/>
+  <path d="M128 104 H176 V126 C176 160 156 182 128 182 Z" fill="#f2a900"/>
+  <!-- Haste e base -->
+  <rect x="117" y="180" width="22" height="20" fill="#e09400"/>
+  <rect x="86" y="198" width="84" height="22" rx="7" fill="#ffc61a"/>
+  <rect x="128" y="198" width="42" height="22" rx="7" fill="#f2a900"/>
+  <!-- Capelo: corpo e tábua -->
+  <path d="M94 92 V112 C94 122 162 122 162 112 V92 Z" fill="#101a35"/>
+  <path d="M128 42 L206 80 L128 118 L50 80 Z" fill="#101a35"/>
+  <path d="M128 42 L206 80 L128 92 L50 80 Z" fill="#26345e"/>
+  <!-- Borla -->
+  <path d="M128 80 L213 86 V116" fill="none" stroke="#ffc61a" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <rect x="206" y="112" width="14" height="22" rx="4" fill="#ffc61a"/>
+  <circle cx="128" cy="80" r="7" fill="#ffc61a"/>
+</svg>

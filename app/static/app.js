@@ -123,7 +123,8 @@ async function telaInicio() {
 
   conteudo.innerHTML = `
     <section class="boas-vindas">
-      <h1>Bons estudos!</h1>
+      <div class="hero"><img src="/static/icone.svg" alt="">
+        <div><h1>Bora, ENEM!</h1><p class="sub">Cada questão de hoje é um passo rumo ao seu triunfo.</p></div></div>
       <p>${totalBanco.toLocaleString("pt-BR")} questões oficiais de ${f.anos.length} edições do ENEM (${Math.min(...f.anos)}–${Math.max(...f.anos)}), todas no seu computador.</p>
       <a class="botao grande" href="#praticar">Praticar agora</a>
       <p class="resumo-plano">${
@@ -1132,7 +1133,7 @@ async function telaConfig() {
   const [g, v] = await Promise.all([api("/api/guia"), api("/api/versao")]);
   const atual = window.aparencia({});
   const TEMAS = { auto: "Automático (igual ao sistema)", claro: "Claro", escuro: "Escuro" };
-  const CORES = { azul: "#1f5fd1", roxo: "#6d28d9", verde: "#047857", laranja: "#c2410c" };
+  const CORES = { azul: "#1f4fb8", roxo: "#6d28d9", verde: "#047857", laranja: "#c2410c" };
   const chips = (grupo, opcoes, valor, rotulo) =>
     `<div class="chips" id="${grupo}">${Object.entries(opcoes)
       .map(([v, t]) => `<button type="button" data-v="${v}" class="${v === valor ? "ativo" : ""}" aria-pressed="${v === valor}">${rotulo(v, t)}</button>`)

@@ -17,4 +17,4 @@ Candidatos: *Nem Desisto*, *TRIunfo*, *Tanto Bate*, *Bora ENEM*. O autor preferi
 ## Consequências
 - O nome é um bom gancho pedagógico: a aba "Guia da prova" explica o que é a TRI e por que acertar as fáceis vale mais.
 - Antes de qualquer uso oficial ou institucional, consultar o INPI para saber se a marca já está registrada.
-- Identidade visual (cores, logo) a definir numa próxima etapa; até lá, mantém-se a paleta atual.
+- Identidade visual definida na ADR 0020 (troféu com capelo).

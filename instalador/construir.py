@@ -11,12 +11,10 @@ from __future__ import annotations
 import hashlib
 import shutil
 import sqlite3
-import struct
 import subprocess
 import sys
 import urllib.request
 import zipfile
-import zlib
 from pathlib import Path
 
 RAIZ = Path(__file__).resolve().parent.parent
@@ -94,48 +92,10 @@ def dados() -> None:
     print(f"  {questoes} questões, {params} com parâmetros TRI")
 
 
-def png(tamanho: int) -> bytes:
-    """Ícone desenhado à mão: quadrado arredondado azul com um sinal de visto branco (sem dependências)."""
-    azul, branco = (31, 95, 209, 255), (255, 255, 255, 255)
-    raio, linhas = tamanho * 0.22, []
-    pontos = [(0.27, 0.53), (0.43, 0.69), (0.74, 0.34)]  # o "visto", em fração do tamanho
-    espessura = tamanho * 0.11
-
-    def perto_do_visto(x, y):
-        for (x1, y1), (x2, y2) in zip(pontos, pontos[1:]):
-            x1, y1, x2, y2 = x1 * tamanho, y1 * tamanho, x2 * tamanho, y2 * tamanho
-            t = max(0, min(1, ((x - x1) * (x2 - x1) + (y - y1) * (y2 - y1)) / ((x2 - x1) ** 2 + (y2 - y1) ** 2)))
-            if (x - x1 - t * (x2 - x1)) ** 2 + (y - y1 - t * (y2 - y1)) ** 2 <= (espessura / 2) ** 2:
-                return True
-        return False
-
-    for y in range(tamanho):
-        linha = bytearray([0])
-        for x in range(tamanho):
-            cx = min(max(x + 0.5, raio), tamanho - raio)
-            cy = min(max(y + 0.5, raio), tamanho - raio)
-            dentro = (x + 0.5 - cx) ** 2 + (y + 0.5 - cy) ** 2 <= raio ** 2
-            linha += bytes(branco if dentro and perto_do_visto(x + 0.5, y + 0.5) else azul if dentro else (0, 0, 0, 0))
-        linhas.append(bytes(linha))
-
-    def bloco(tipo, dados):
-        return struct.pack(">I", len(dados)) + tipo + dados + struct.pack(">I", zlib.crc32(tipo + dados))
-
-    cab = struct.pack(">IIBBBBB", tamanho, tamanho, 8, 6, 0, 0, 0)
-    return b"\x89PNG\r\n\x1a\n" + bloco(b"IHDR", cab) + bloco(b"IDAT", zlib.compress(b"".join(linhas), 9)) + bloco(b"IEND", b"")
-
-
 def icone() -> None:
-    etapa("Gerando o ícone")
-    imagens = [(t, png(t)) for t in (16, 32, 48, 256)]
-    cabecalho = struct.pack("<HHH", 0, 1, len(imagens))
-    deslocamento, entradas, corpo = 6 + 16 * len(imagens), b"", b""
-    for t, dados in imagens:
-        entradas += struct.pack("<BBBBHHII", t % 256, t % 256, 0, 0, 1, 32, len(dados), deslocamento + len(corpo))
-        corpo += dados
-    ico = cabecalho + entradas + corpo
-    (BUILD / "triunfo.ico").write_bytes(ico)
-    (ALVO / "triunfo.ico").write_bytes(ico)
+    etapa("Copiando o ícone (gerado por instalador/gerar_icone.py)")
+    for destino in (BUILD / "triunfo.ico", ALVO / "triunfo.ico"):
+        shutil.copy2(RAIZ / "instalador" / "triunfo.ico", destino)
 
 
 def instalador() -> Path:
