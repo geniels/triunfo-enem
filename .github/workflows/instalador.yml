@@ -46,7 +46,7 @@ jobs:
 
       - name: Guardar o instalador (sem assinatura)
         id: artefato
-        uses: actions/upload-artifact@v5
+        uses: actions/upload-artifact@v6
         with:
           name: instalador
           path: dist/TRIunfo-Estudante-*.exe
