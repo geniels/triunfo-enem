@@ -32,7 +32,8 @@ Atualização em 1 clique com conferência do SHA-256 (versão 0.4.3, ADR 0019).
   1 clique virá com o instalador.
 
 ## Pendências anotadas
-- **Assinatura digital do instalador** (antes de distribuir em escala): o Controle Inteligente de Aplicativos do
+- **Assinatura digital do instalador** (antes de distribuir em escala). Caminho preparado: build no GitHub Actions
+  (ADR 0021) e passo a passo em `docs/ASSINATURA.md`; falta o autor candidatar o projeto à SignPath. o Controle Inteligente de Aplicativos do
   Windows 11 bloqueou o desinstalador sem assinatura no PC de referência. Caminhos: SignPath Foundation (grátis para
   código aberto, exige build no GitHub Actions), certificado Certum Open Source (pago, pessoa física) ou certificado
   de assinatura de código ICP-Brasil de uma instituição parceira (escola, secretaria). Ver ADR 0017.

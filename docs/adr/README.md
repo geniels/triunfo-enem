@@ -28,6 +28,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0018](0018-progresso-separado.md) | Progresso do aluno separado do banco de questões, com ids fixos | Aceita |
 | [0019](0019-atualizacao-um-clique.md) | Atualização em 1 clique, com conferência de integridade | Aceita |
 | [0020](0020-identidade-visual.md) | Identidade visual: troféu com capelo e cara de prova | Aceita |
+| [0021](0021-build-no-github-actions.md) | Instalador gerado no GitHub Actions, pronto para assinatura | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 
