@@ -8,7 +8,7 @@ from pathlib import Path
 from app.db import DATA_DIR, RAIZ
 from app.guia import versao as comparavel
 
-VERSAO = "0.4.4"
+VERSAO = "0.5.0"
 URL = "https://api.github.com/repos/geniels/triunfo-enem/releases/latest"
 DOWNLOADS = "https://github.com/geniels/triunfo-enem/releases/download/"  # único lugar de onde se baixa
 LIMITE_BYTES = 300_000_000
