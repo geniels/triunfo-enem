@@ -1,6 +1,6 @@
 # 0010. Duas edições: Estudante e Escola
 
-- **Status:** Aceita
+- **Status:** Aceita. A edição Escola foi ampliada para o **modo turma** (ADR 0022)
 - **Data:** 2026-11-08
 
 ## Contexto

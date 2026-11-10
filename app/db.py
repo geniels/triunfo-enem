@@ -72,12 +72,17 @@ CREATE TABLE IF NOT EXISTS banco.tri_escala (
 
 # Sem chave estrangeira para "questoes": ela mora em outro arquivo (o SQLite não liga bancos diferentes).
 ESQUEMA_ALUNO = """
--- Preparado para o modo escola: cada aluno tem seu progresso.
+-- Cada aluno tem seu progresso. O 1 ("Eu") é quem usa o próprio PC; os outros entram pelo modo turma (ADR 0022).
 CREATE TABLE IF NOT EXISTS alunos (
     id    INTEGER PRIMARY KEY,
     nome  TEXT NOT NULL
 );
 INSERT OR IGNORE INTO alunos (id, nome) VALUES (1, 'Eu');
+
+CREATE TABLE IF NOT EXISTS config (
+    chave  TEXT PRIMARY KEY,
+    valor  TEXT NOT NULL
+);
 
 CREATE TABLE IF NOT EXISTS respostas (
     id           INTEGER PRIMARY KEY,
@@ -130,7 +135,7 @@ CREATE TABLE IF NOT EXISTS simulados (
     criado_em   TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
 """
-TABELAS_ALUNO = ["alunos", "respostas", "redacoes", "plano", "plano_feitos", "simulados"]
+TABELAS_ALUNO = ["alunos", "config", "respostas", "redacoes", "plano", "plano_feitos", "simulados"]
 
 
 def abrir(pasta: Path = DATA_DIR) -> sqlite3.Connection:
@@ -156,8 +161,25 @@ def conectar(pasta: Path = DATA_DIR) -> sqlite3.Connection:
     return con
 
 
+# Colunas acrescentadas depois da criação da tabela: bancos antigos as ganham ao abrir.
+COLUNAS_NOVAS = {
+    "alunos": {
+        "pin_hash": "TEXT",                                   # PBKDF2 "sal$hash"; NULL para o organizador
+        "tentativas": "INTEGER NOT NULL DEFAULT 0",           # PINs errados seguidos
+        "bloqueado_ate": "REAL",                              # time.time() até quando espera
+        "criado_em": "TEXT",
+    },
+}
+
+
 def criar_tabelas(con: sqlite3.Connection) -> None:
     con.executescript(ESQUEMA_BANCO + ESQUEMA_ALUNO)
+    for tabela, colunas in COLUNAS_NOVAS.items():
+        existentes = {c[1] for c in con.execute(f"PRAGMA main.table_info({tabela})")}
+        for nome, tipo in colunas.items():
+            if nome not in existentes:
+                con.execute(f"ALTER TABLE {tabela} ADD COLUMN {nome} {tipo}")
+    con.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_alunos_nome ON alunos (nome COLLATE NOCASE)")
     con.commit()
 
 

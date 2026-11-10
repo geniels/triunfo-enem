@@ -332,3 +332,20 @@ input[type="date"] { font: inherit; padding: .5rem .7rem; border-radius: 8px; bo
 .hero img { flex: none; width: 96px; height: 96px; }
 .hero h1 { font-size: 2rem; }
 @media (max-width: 520px) { .hero img { width: 64px; height: 64px; } .hero h1 { font-size: 1.5rem; } }
+
+/* Modo turma (ADR 0022) */
+.quem { margin-left: auto; color: var(--suave); text-decoration: none; font-weight: 600; max-width: 14rem;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.quem:hover { color: var(--texto); }
+.quem:not([hidden]) + .engrenagem { margin-left: 0; }
+.sem-login .topo nav, .sem-login .engrenagem, .sem-login .so-logado { display: none; }
+.entrar { max-width: 32rem; margin-inline: auto; }
+.entrar > img { display: block; margin-bottom: .5rem; }
+.entrar .campos label { flex: 1 1 12rem; }
+.entrar input { font: inherit; padding: .55rem .7rem; border-radius: 8px; border: 1px solid var(--linha);
+  background: var(--cartao); color: var(--texto); min-width: 0; }
+.endereco { font-size: 1.4rem; font-weight: 700; margin: .5rem 0; word-break: break-all; user-select: all; }
+.pin { font-size: 1.25rem; letter-spacing: .15em; }
+.botao.pequeno { padding: .35rem .7rem; font-size: .9rem; white-space: nowrap; }
+.acoes-linha { display: flex; flex-wrap: wrap; gap: .25rem; margin-top: .35rem; font-weight: 400; }
+caption { text-align: left; font-weight: 600; padding-bottom: .4rem; }

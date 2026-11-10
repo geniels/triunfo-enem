@@ -2,7 +2,7 @@
 
 Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o trabalho.
 
-## Onde estamos (2026-11-09)
+## Onde estamos (2026-11-10)
 
 **Fase 1 concluída**, programa renomeado para **TRIunfo** (ADR 0007), aba **Guia da prova** pronta (regras do
 Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em Configurações (ADR 0008). Revisão de código feita (agent-skills + ponytail).
@@ -14,7 +14,10 @@ Progresso do aluno separado do banco de questões, com ids fixos (versão 0.4.2,
 Atualização em 1 clique com conferência do SHA-256 (versão 0.4.3, ADR 0019).
 Versão 0.4.4: identidade visual nova (ADR 0020) chega ao instalador (a 0.4.3 saiu antes dela) e uma conexão
 SQLite por requisição (1º pré-requisito do modo escola).
-**Próximo passo:** publicar a v0.4.4 e seguir nos pré-requisitos do modo escola (identificar o aluno). A 3.3 (IA local) aguarda a medição de desempenho.
+v0.4.4 publicada. README com a assinatura pela SignPath e `PRIVACIDADE.md`, prontos para a candidatura.
+**Fase 4 em andamento: modo turma** (ADR 0022). Abrir turma, entrada com nome e PIN e lista de participantes estão prontos.
+**Próximo passo:** o autor testa com um 2º notebook na mesma rede (Firewall) e envia a candidatura à SignPath; depois,
+lançar a 0.5.0 e fazer o rascunho com caneta (ver backlog). A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -23,7 +26,7 @@ SQLite por requisição (1º pré-requisito do modo escola).
 | 1 | Banco de questões 2009–2023, prática com filtros, cronômetro, motivo do erro, caderno de erros, painel | ✅ Concluída |
 | 2 | 2.1 simulado por dia, tempo e numeração oficiais ✅ · 2.2 nota TRI com parâmetros oficiais, validada ✅ · 2.3 revisão espaçada (1/3/7/21 dias, fáceis primeiro) ✅ · 2.4 plano de estudos em ciclo ✅ | ✅ Concluída |
 | 3 | **Redação**: 3.1 temas desde 1998, editor pautado, cronômetro, linhas, salvamento ✅ · 3.2 autoavaliação pelas 5 competências e histórico ✅ · 3.3 correção por IA opcional ⏳ | ▶️ Em andamento |
-| 4 | **Modo escola** (prioridade do usuário): servir na rede local, alunos com login simples, painel do professor | ⏳ |
+| 4 | **Modo turma** (ADR 0022): abrir turma na rede local ✅ · nome + PIN ✅ · participantes e novo PIN ✅ · painel do organizador por área ⏳ | ▶️ Em andamento |
 | 5 | **Instalador `.exe` da edição Estudante** ✅ (v0.4.1) · atualização em 1 clique ✅ · provas 2024/2025; classificação por assunto; Raspberry Pi | ⏳ |
 
 ## Decisões tomadas em 2026-11-08
@@ -42,16 +45,20 @@ SQLite por requisição (1º pré-requisito do modo escola).
 - **Medir a IA local no PC de referência** (i3-N305, 8 GB): tempo por redação, uso de memória e concordância com
   redações de nota oficial conhecida. Pré-requisito da Fase 3.3.
 
-## Pré-requisitos do modo escola (revisão de código, 2026-11-08)
+## Pré-requisitos do modo turma (revisão de código, 2026-11-08)
 - ✅ **Uma conexão SQLite por requisição** (v0.4.4): dependência `banco()` em `app/main.py`, `INSERT ... RETURNING id`
   em `responder`. Conferido com 8 alunos simultâneos (200 respostas, todas com o id certo).
-- Identificar o aluno (cookie assinado ou código da turma) antes de abrir em `0.0.0.0`; avaliar `TrustedHostMiddleware`.
+- ✅ Identificar o aluno antes de abrir em `0.0.0.0`: nome + PIN e cookie assinado (ADR 0022). `TrustedHostMiddleware`
+  dispensado: o servidor da turma só existe enquanto ela está aberta, e o local só escuta em 127.0.0.1.
 - `/api/proxima`: não mandar todas as questões vistas na URL (passa do limite em sessões muito longas).
 - `esc()` nos campos vindos da fonte que entram no HTML (letra, gabarito) ou validar `A-E` no importador.
 - Importador: trocar URLs de imagem pelo regex, não por substring.
 - 7 questões vêm com só 4 alternativas da fonte (ids 539, 783, 1305, 2256, 2326, 2475, 2497).
 
 ## Melhorias registradas (backlog)
+- **Rascunho com caneta** (próximo depois do modo turma): camada transparente sobre a questão para riscar, sublinhar e fazer
+  contas com caneta (Apple Pencil, caneta do Windows), dedo ou mouse; a caneta desenha e o dedo rola. Pointer Events + canvas,
+  sem biblioteca. Princípio: prática ativa, como no caderno da prova (ADR 0004). Precisa de ADR.
 - Teste automatizado do simulado (montagem do dia, validação das respostas, resultado), com banco temporário.
 - TRI: cobertura atual de 47 das 60 combinações ano/área (2009–2023). Sem nota: 2009 CN/CH, 2016 CN/CH/LC e 2017
   (a ordem do enem.dev não casa com nenhum caderno oficial); 2011 CN, 2013 MT, 2018 CN e 2019 MT (o ajuste não confere

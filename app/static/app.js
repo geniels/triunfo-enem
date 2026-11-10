@@ -21,9 +21,21 @@ function esc(s) {
   return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// Modo turma (ADR 0022): "local" é o próprio PC (sem login); "turma" é quem entra pela rede com nome e PIN.
+let eu = { modo: "local", aluno: null };
+class PrecisaEntrar extends Error {}
+
 async function api(caminho, opcoes) {
   const r = await fetch(caminho, opcoes);
-  if (!r.ok) throw new Error(`Erro ${r.status} em ${caminho}`);
+  if (r.status === 401 && eu.modo === "turma") {
+    eu.aluno = null; // PIN trocado pelo organizador ou participante removido
+    telaEntrar();
+    throw new PrecisaEntrar();
+  }
+  if (!r.ok) {
+    const d = await r.json().catch(() => ({}));
+    throw new Error(typeof d.detail === "string" ? d.detail : `Erro ${r.status} em ${caminho}`);
+  }
   return r.json();
 }
 
@@ -65,12 +77,19 @@ let limparTela = null; // função de limpeza (ex.: parar cronômetro)
 async function navegar() {
   limparTela?.();
   limparTela = null;
+  if (eu.modo === "turma") {
+    // Confere a cada tela: o organizador pode ter gerado um PIN novo ou removido o participante.
+    eu = await fetch("/api/turma/eu").then((r) => r.json()).catch(() => eu);
+    mostrarQuemSou();
+    if (!eu.aluno) return telaEntrar();
+  }
   const [rota, arg] = (location.hash.slice(1) || "inicio").split("/");
   document.querySelectorAll(".topo [data-rota]").forEach((a) => a.classList.toggle("ativo", a.dataset.rota === rota));
   conteudo.innerHTML = '<p class="carregando">Carregando…</p>';
   try {
     await (rotas[rota] || telaInicio)(arg);
   } catch (e) {
+    if (e instanceof PrecisaEntrar) return;
     conteudo.innerHTML = `<div class="cartao erro"><h2>Algo deu errado</h2><p>${esc(e.message)}</p>
       <p>Verifique se o servidor está rodando e se as questões foram importadas.</p></div>`;
   }
@@ -1146,7 +1165,21 @@ async function telaConfig() {
         (v, hex) => `<span class="amostra" style="background:${hex}"></span>${v[0].toUpperCase() + v.slice(1)}`)}</fieldset>
       <p class="sub">A escolha fica salva neste aparelho.</p>
     </section>
+    ${eu.modo === "turma" ? `
     <section class="cartao">
+      <h2>Sua conta na turma</h2>
+      <p>Você entrou como <b>${esc(eu.aluno.nome)}</b>. Este aparelho fica lembrado.</p>
+      <p class="sub">Num computador que outras pessoas usam, saia ao terminar.</p>
+      <div class="acoes"><button class="botao secundario" id="sair">Sair</button></div>
+    </section>` : `
+    <section class="cartao" aria-labelledby="turma-titulo">
+      <h2 id="turma-titulo">Modo turma</h2>
+      <p class="sub">Estude junto com colegas na mesma rede Wi-Fi: numa escola, num cursinho ou com amigos. Este
+        computador vira o da turma; os outros entram pelo navegador, com nome e um PIN de 4 números. Tudo fica
+        guardado só neste computador.</p>
+      <div id="turma-corpo"><p class="carregando">Carregando…</p></div>
+    </section>`}
+    <section class="cartao" ${eu.modo === "turma" ? "hidden" : ""}>
       <h2>Atualizações</h2>
       <p>TRIunfo versão <b>${esc(v.atual)}</b><br>Regras do guia: <b>${esc(g.edital)}</b> (versão ${esc(g.versao)})</p>
       <p class="sub">O TRIunfo funciona sem internet. De vez em quando, conectado, toque abaixo: o guia da prova é
@@ -1166,6 +1199,16 @@ async function telaConfig() {
       });
     };
   }
+
+  if (eu.modo === "turma") {
+    $("#sair").onclick = async () => {
+      await fetch("/api/turma/sair", { method: "POST" });
+      eu.aluno = null;
+      telaEntrar();
+    };
+    return;
+  }
+  desenharTurma(await api("/api/turma"));
 
   $("#sincronizar").onclick = async (e) => {
     const botao = e.currentTarget;
@@ -1206,4 +1249,174 @@ async function telaConfig() {
   };
 }
 
-navegar();
+/* ---------------------------- Modo turma (ADR 0022) ---------------------------- */
+
+function desenharTurma(t, aviso = "") {
+  const corpo = $("#turma-corpo");
+  if (!corpo) return;
+  const linhas = t.participantes.map((p) => `
+    <tr>
+      <th scope="row">${esc(p.nome)}
+        <div class="acoes-linha">
+          <button class="botao secundario pequeno" data-pin="${p.id}" aria-label="Gerar novo PIN para ${esc(p.nome)}">Novo PIN</button>
+          <button class="botao link pequeno" data-remover="${p.id}" data-nome="${esc(p.nome)}" aria-label="Remover ${esc(p.nome)} da turma">Remover</button>
+        </div>
+      </th>
+      <td>${p.respondidas}</td>
+      <td>${p.respondidas ? Math.round((100 * p.acertos) / p.respondidas) + "%" : "—"}</td>
+      <td>${p.ultima_atividade ? dataCurta(p.ultima_atividade) : "—"}</td>
+    </tr>`).join("");
+  corpo.innerHTML = `
+    ${t.aberta ? `
+      <div class="retorno destaque-aviso">
+        <b>Turma aberta.</b> Os colegas, conectados na mesma rede Wi-Fi, digitam no navegador:
+        <p class="endereco">${esc(t.endereco)}</p>
+        <small>A turma fica aberta até você clicar em "Fechar turma" ou fechar o TRIunfo.</small>
+      </div>
+      <div class="acoes"><button class="botao secundario" id="turma-fechar">Fechar turma</button></div>` : `
+      <p class="sub">Ao abrir, o Windows pode perguntar sobre o <b>Firewall</b>: marque <b>Redes privadas</b> e
+        clique em <b>Permitir acesso</b>. Sem isso, os colegas não conseguem entrar.</p>
+      <div class="acoes"><button class="botao" id="turma-abrir">Abrir turma</button></div>`}
+    <div aria-live="polite">${aviso}</div>
+    ${t.participantes.length ? `
+      <div class="tabela"><table>
+        <caption>Participantes (${t.participantes.length})</caption>
+        <thead><tr><th scope="col">Nome</th><th scope="col">Questões</th><th scope="col">Acertos</th>
+          <th scope="col">Última vez</th></tr></thead>
+        <tbody>${linhas}</tbody>
+      </table></div>
+      <p class="sub">Esqueceu o PIN? Clique em <b>Novo PIN</b> e passe o número para a pessoa.</p>`
+      : `<p class="sub">Ninguém entrou ainda.</p>`}`;
+
+  const acao = async (botao, fazer) => {
+    botao.disabled = true;
+    try {
+      await fazer();
+    } catch (e) {
+      desenharTurma(t, `<div class="retorno nao">${esc(e.message)}</div>`);
+    }
+  };
+  const abrir = $("#turma-abrir");
+  if (abrir) abrir.onclick = () => acao(abrir, async () => {
+    abrir.textContent = "Abrindo…";
+    desenharTurma(await post("/api/turma/abrir", {}));
+    $("#turma-fechar")?.focus();
+  });
+  const fechar = $("#turma-fechar");
+  if (fechar) fechar.onclick = () => acao(fechar, async () => {
+    desenharTurma(await post("/api/turma/fechar", {}));
+    $("#turma-abrir")?.focus();
+  });
+  corpo.querySelectorAll("[data-pin]").forEach((b) => (b.onclick = () => acao(b, async () => {
+    const { pin } = await post(`/api/turma/participantes/${b.dataset.pin}/pin`, {});
+    const nome = t.participantes.find((p) => p.id === +b.dataset.pin).nome;
+    desenharTurma(await api("/api/turma"),
+      `<div class="retorno ok">Novo PIN de <b>${esc(nome)}</b>: <b class="pin">${esc(pin)}</b>. Passe o número para a
+        pessoa; ele não aparece de novo.</div>`);
+  })));
+  corpo.querySelectorAll("[data-remover]").forEach((b) => (b.onclick = () => {
+    if (!confirm(`Remover ${b.dataset.nome} da turma? Todo o progresso dessa pessoa será apagado.`)) return;
+    acao(b, async () => {
+      await api(`/api/turma/participantes/${b.dataset.remover}`, { method: "DELETE" });
+      desenharTurma(await api("/api/turma"), `<div class="retorno ok">${esc(b.dataset.nome)} saiu da turma.</div>`);
+    });
+  }));
+}
+
+function mostrarQuemSou() {
+  const quem = $("#quem");
+  quem.hidden = !eu.aluno;
+  quem.textContent = eu.aluno ? `Olá, ${eu.aluno.nome}` : "";
+  document.body.classList.toggle("sem-login", eu.modo === "turma" && !eu.aluno);
+}
+
+function telaEntrar() {
+  limparTela?.();
+  limparTela = null;
+  mostrarQuemSou();
+  let primeira = false;
+  conteudo.innerHTML = `
+    <section class="cartao config entrar">
+      <img src="/static/icone.svg" alt="" width="64" height="64">
+      <h1>Entrar na turma</h1>
+      <p class="sub">Este TRIunfo é de uma turma. Entre com seu nome e um PIN de 4 números para guardar o seu
+        progresso. Este aparelho fica lembrado.</p>
+      <fieldset><legend>Você já entrou antes?</legend>
+        <div class="chips" id="e-modo">
+          <button type="button" data-v="nao" class="ativo" aria-pressed="true">Já tenho acesso</button>
+          <button type="button" data-v="sim" aria-pressed="false">Primeira vez</button>
+        </div>
+      </fieldset>
+      <form id="f-entrar" novalidate>
+        <div class="campos">
+          <label>Seu nome
+            <input id="e-nome" autocomplete="name" maxlength="40" required>
+          </label>
+          <label>PIN de 4 números
+            <input id="e-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off" required
+              aria-describedby="e-dica">
+          </label>
+          <label id="l-pin2" hidden>Repita o PIN
+            <input id="e-pin2" type="password" inputmode="numeric" maxlength="4" autocomplete="off">
+          </label>
+        </div>
+        <p class="sub" id="e-dica">Esqueceu o PIN? Peça um novo a quem organiza a turma.</p>
+        <div class="acoes"><button class="botao" type="submit" id="e-botao">Entrar</button></div>
+        <div id="e-erro" class="retorno nao" role="alert" hidden></div>
+      </form>
+    </section>`;
+  $("#e-nome").focus();
+
+  $("#e-modo").onclick = (e) => {
+    const b = e.target.closest("button");
+    if (!b) return;
+    primeira = b.dataset.v === "sim";
+    $("#e-modo").querySelectorAll("button").forEach((x) => {
+      x.classList.toggle("ativo", x === b);
+      x.setAttribute("aria-pressed", x === b);
+    });
+    $("#l-pin2").hidden = !primeira;
+    $("#e-botao").textContent = primeira ? "Criar meu acesso" : "Entrar";
+    $("#e-dica").textContent = primeira
+      ? "Use nome e sobrenome, como os colegas conhecem você. Escolha um PIN fácil de lembrar e não conte para ninguém."
+      : "Esqueceu o PIN? Peça um novo a quem organiza a turma.";
+    $("#e-erro").hidden = true;
+  };
+
+  $("#f-entrar").onsubmit = async (e) => {
+    e.preventDefault();
+    const erro = (msg, campo) => {
+      $("#e-erro").hidden = false;
+      $("#e-erro").textContent = msg;
+      campo?.focus();
+    };
+    const nome = $("#e-nome").value.trim(), pin = $("#e-pin").value;
+    if (nome.length < 2) return erro("Escreva seu nome.", $("#e-nome"));
+    if (!/^\d{4}$/.test(pin)) return erro("O PIN tem exatamente 4 números.", $("#e-pin"));
+    if (primeira && pin !== $("#e-pin2").value) return erro("Os dois PINs estão diferentes. Digite de novo.", $("#e-pin2"));
+    const botao = $("#e-botao");
+    botao.disabled = true;
+    // fetch direto: aqui um 401 é "PIN errado", e não "precisa entrar".
+    const r = await fetch(primeira ? "/api/turma/cadastrar" : "/api/turma/entrar", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nome, pin }),
+    }).catch(() => null);
+    botao.disabled = false;
+    if (!r) return erro("Não foi possível falar com o computador da turma. Confira se você está no mesmo Wi-Fi e se a turma está aberta.");
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      return erro(typeof d.detail === "string" ? d.detail : "Confira o nome e o PIN.", $("#e-pin"));
+    }
+    eu = await api("/api/turma/eu");
+    mostrarQuemSou();
+    if (location.hash === "#inicio" || !location.hash) navegar();
+    else location.hash = "#inicio";
+  };
+}
+
+(async function iniciar() {
+  try {
+    eu = await (await fetch("/api/turma/eu")).json();
+  } catch {}
+  mostrarQuemSou();
+  navegar();
+})();

@@ -17,7 +17,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0007](0007-nome-triunfo.md) | Nome do programa: TRIunfo | Aceita |
 | [0008](0008-guia-sincronizavel.md) | Guia da prova em Markdown, sincronizável sob demanda | Aceita |
 | [0009](0009-redacao-autoavaliacao.md) | Redação: escrita cronometrada e autoavaliação guiada | Aceita |
-| [0010](0010-edicoes-estudante-e-escola.md) | Duas edições: Estudante e Escola | Aceita |
+| [0010](0010-edicoes-estudante-e-escola.md) | Duas edições: Estudante e Escola | Aceita (a Escola virou o modo turma, ADR 0022) |
 | [0011](0011-ia-na-redacao.md) | IA na redação: local por padrão; online só com conta paga da escola | Aceita |
 | [0012](0012-atualizacoes.md) | Atualizações: conteúdo pelo botão, programa com aviso e instalação verificada | Aceita |
 | [0013](0013-simulado.md) | Simulado por dia de prova, na ordem e no tempo oficiais | Aceita |
@@ -29,6 +29,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0019](0019-atualizacao-um-clique.md) | Atualização em 1 clique, com conferência de integridade | Aceita |
 | [0020](0020-identidade-visual.md) | Identidade visual: troféu com capelo e cara de prova | Aceita |
 | [0021](0021-build-no-github-actions.md) | Instalador gerado no GitHub Actions, pronto para assinatura | Aceita |
+| [0022](0022-modo-turma.md) | Modo turma: estudar em grupo na rede local, com nome e PIN | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 
