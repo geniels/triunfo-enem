@@ -2,7 +2,7 @@
 
 Atualize este arquivo ao terminar cada etapa. É o primeiro lugar para retomar o trabalho.
 
-## Onde estamos (2026-11-08)
+## Onde estamos (2026-11-09)
 
 **Fase 1 concluída**, programa renomeado para **TRIunfo** (ADR 0007), aba **Guia da prova** pronta (regras do
 Edital nº 64/2026, gestão de tempo e modelo de estudo), **sincronizável** em Configurações (ADR 0008). Revisão de código feita (agent-skills + ponytail).
@@ -12,7 +12,9 @@ Aparência: tema claro, escuro ou automático e 4 cores de destaque, com engrena
 **Instalador da edição Estudante pronto** (versão 0.4.1, ADR 0017).
 Progresso do aluno separado do banco de questões, com ids fixos (versão 0.4.2, ADR 0018).
 Atualização em 1 clique com conferência do SHA-256 (versão 0.4.3, ADR 0019).
-**Próximo passo:** modo escola (Fase 4), começando pelos pré-requisitos de segurança. A 3.3 (IA local) aguarda a medição de desempenho.
+Versão 0.4.4: identidade visual nova (ADR 0020) chega ao instalador (a 0.4.3 saiu antes dela) e uma conexão
+SQLite por requisição (1º pré-requisito do modo escola).
+**Próximo passo:** publicar a v0.4.4 e seguir nos pré-requisitos do modo escola (identificar o aluno). A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -41,8 +43,8 @@ Atualização em 1 clique com conferência do SHA-256 (versão 0.4.3, ADR 0019).
   redações de nota oficial conhecida. Pré-requisito da Fase 3.3.
 
 ## Pré-requisitos do modo escola (revisão de código, 2026-11-08)
-- **Uma conexão SQLite por requisição** (hoje há uma só, compartilhada entre threads; com vários alunos ao mesmo tempo,
-  um commit ou rollback de um aluno pode afetar a resposta de outro). Usar `INSERT ... RETURNING id` em `responder`.
+- ✅ **Uma conexão SQLite por requisição** (v0.4.4): dependência `banco()` em `app/main.py`, `INSERT ... RETURNING id`
+  em `responder`. Conferido com 8 alunos simultâneos (200 respostas, todas com o id certo).
 - Identificar o aluno (cookie assinado ou código da turma) antes de abrir em `0.0.0.0`; avaliar `TrustedHostMiddleware`.
 - `/api/proxima`: não mandar todas as questões vistas na URL (passa do limite em sessões muito longas).
 - `esc()` nos campos vindos da fonte que entram no HTML (letra, gabarito) ou validar `A-E` no importador.

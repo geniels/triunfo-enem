@@ -6,26 +6,40 @@ Abrir:  http://localhost:8000
 from __future__ import annotations
 
 import json
+import sqlite3
 from collections import defaultdict
 from datetime import date, timedelta
-from typing import Literal
+from typing import Annotated, Literal
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from app import guia, plano, redacao, revisao, tri, versao
-from app.db import AREAS, IMAGENS_DIR, RAIZ, conectar, criar_tabelas
+from app.db import AREAS, IMAGENS_DIR, RAIZ, abrir, conectar, criar_tabelas
 
 STATIC_DIR = RAIZ / "app" / "static"
 ALUNO_PADRAO = 1  # o modo escola (vários alunos) vem numa fase seguinte
 
-con = conectar()
-criar_tabelas(con)
+_inicial = conectar()  # migração, tabelas e modo WAL, uma vez ao iniciar
+criar_tabelas(_inicial)
+_inicial.close()
 IMAGENS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="TRIunfo", version=versao.VERSAO)
+
+
+def banco():
+    """Uma conexão por requisição, fechada no fim (pré-requisito do modo escola)."""
+    con = abrir()
+    try:
+        yield con
+    finally:
+        con.close()
+
+
+Con = Annotated[sqlite3.Connection, Depends(banco)]
 
 
 @app.middleware("http")
@@ -94,7 +108,7 @@ def filtro_sql(area: str | None, ano: int | None, idioma: str) -> tuple[str, lis
 
 
 @app.get("/api/filtros")
-def filtros():
+def filtros(con: Con):
     anos = [r[0] for r in con.execute("SELECT DISTINCT ano FROM questoes ORDER BY ano DESC")]
     contagem = dict(con.execute("SELECT area, COUNT(*) FROM questoes WHERE idioma IN ('', 'ingles') GROUP BY area"))
     return {
@@ -103,7 +117,7 @@ def filtros():
     }
 
 
-def _revisoes() -> dict:
+def _revisoes(con: sqlite3.Connection) -> dict:
     """Questões com revisão para hoje (mais fáceis primeiro) e quantas vencem nos próximos 7 dias."""
     historico = defaultdict(list)
     for qid, dia, correta in con.execute(
@@ -123,13 +137,14 @@ def _revisoes() -> dict:
 
 
 @app.get("/api/revisao")
-def resumo_revisao():
-    r = _revisoes()
+def resumo_revisao(con: Con):
+    r = _revisoes(con)
     return {"hoje": len(r["hoje"]), "proximos_7_dias": r["proximos_7_dias"]}
 
 
 @app.get("/api/proxima")
 def proxima(
+    con: Con,
     area: str | None = None,
     ano: int | None = None,
     idioma: Literal["ingles", "espanhol"] = "ingles",
@@ -138,7 +153,7 @@ def proxima(
 ):
     """Sorteia a próxima questão conforme o modo de estudo."""
     if modo == "revisao":  # ordem fixa: as mais fáceis primeiro (ADR 0015)
-        fila = [q for q in _revisoes()["hoje"] if q not in set(excluir)]
+        fila = [q for q in _revisoes(con)["hoje"] if q not in set(excluir)]
         return {"id": fila[0] if fila else None, "restantes": len(fila)}
     where, params = filtro_sql(area, ano, idioma)
     if modo == "novas":
@@ -163,7 +178,7 @@ def proxima(
 
 
 @app.get("/api/questao/{qid}")
-def questao(qid: int):
+def questao(con: Con, qid: int):
     """Retorna a questão SEM o gabarito (ele só vem depois de responder)."""
     q = con.execute("SELECT * FROM questoes WHERE id = ?", (qid,)).fetchone()
     if not q:
@@ -193,17 +208,18 @@ class Resposta(BaseModel):
 
 
 @app.post("/api/responder")
-def responder(r: Resposta):
+def responder(con: Con, r: Resposta):
     q = con.execute("SELECT gabarito FROM questoes WHERE id = ?", (r.questao_id,)).fetchone()
     if not q:
         raise HTTPException(404, "Questão não encontrada")
     correta = q["gabarito"] == r.alternativa
     with con:
-        cur = con.execute(
-            "INSERT INTO respostas (aluno_id, questao_id, alternativa, correta, tempo_seg) VALUES (?, ?, ?, ?, ?)",
+        rid = con.execute(
+            "INSERT INTO respostas (aluno_id, questao_id, alternativa, correta, tempo_seg) VALUES (?, ?, ?, ?, ?) "
+            "RETURNING id",
             (ALUNO_PADRAO, r.questao_id, r.alternativa, int(correta), r.tempo_seg),
-        )
-    return {"resposta_id": cur.lastrowid, "correta": correta, "gabarito": q["gabarito"]}
+        ).fetchone()[0]
+    return {"resposta_id": rid, "correta": correta, "gabarito": q["gabarito"]}
 
 
 class Motivo(BaseModel):
@@ -211,7 +227,7 @@ class Motivo(BaseModel):
 
 
 @app.post("/api/resposta/{rid}/motivo")
-def marcar_motivo(rid: int, m: Motivo):
+def marcar_motivo(con: Con, rid: int, m: Motivo):
     with con:
         n = con.execute(
             "UPDATE respostas SET motivo_erro = ? WHERE id = ? AND aluno_id = ? AND correta = 0", (m.motivo, rid, ALUNO_PADRAO)
@@ -222,7 +238,7 @@ def marcar_motivo(rid: int, m: Motivo):
 
 
 @app.get("/api/estatisticas")
-def estatisticas():
+def estatisticas(con: Con):
     por_area = {
         r["area"]: dict(r)
         for r in con.execute(
@@ -266,7 +282,7 @@ def estatisticas():
 
 
 @app.get("/api/erros")
-def caderno_de_erros(area: str | None = None):
+def caderno_de_erros(con: Con, area: str | None = None):
     """Questões cuja última resposta foi errada, com o motivo marcado pelo aluno."""
     params: list = [ALUNO_PADRAO]
     extra = ""
@@ -306,7 +322,7 @@ class AtualizaRedacao(BaseModel):
     notas: dict[str, int] | None = None
 
 
-def _redacao(rid: int) -> dict:
+def _redacao(con: sqlite3.Connection, rid: int) -> dict:
     r = con.execute("SELECT * FROM redacoes WHERE id = ? AND aluno_id = ?", (rid, ALUNO_PADRAO)).fetchone()
     if not r:
         raise HTTPException(404, "Redação não encontrada")
@@ -314,7 +330,7 @@ def _redacao(rid: int) -> dict:
 
 
 @app.get("/api/redacoes")
-def listar_redacoes():
+def listar_redacoes(con: Con):
     rows = con.execute(
         "SELECT id, tema, tempo_seg, entregue, notas, criado_em, length(texto) AS caracteres "
         "FROM redacoes WHERE aluno_id = ? ORDER BY id DESC",
@@ -324,7 +340,7 @@ def listar_redacoes():
 
 
 @app.post("/api/redacoes")
-def criar_redacao(n: NovaRedacao):
+def criar_redacao(con: Con, n: NovaRedacao):
     with con:
         rid = con.execute(
             "INSERT INTO redacoes (aluno_id, tema) VALUES (?, ?) RETURNING id", (ALUNO_PADRAO, n.tema.strip())
@@ -333,13 +349,13 @@ def criar_redacao(n: NovaRedacao):
 
 
 @app.get("/api/redacoes/{rid}")
-def abrir_redacao(rid: int):
-    return _redacao(rid)
+def abrir_redacao(con: Con, rid: int):
+    return _redacao(con, rid)
 
 
 @app.patch("/api/redacoes/{rid}")
-def atualizar_redacao(rid: int, a: AtualizaRedacao):
-    _redacao(rid)  # 404 se não existir
+def atualizar_redacao(con: Con, rid: int, a: AtualizaRedacao):
+    _redacao(con, rid)  # 404 se não existir
     if a.notas is not None and not redacao.notas_validas(a.notas):
         raise HTTPException(422, "Notas devem ter c1..c5, cada uma em 0, 40, 80, 120, 160 ou 200")
     campos = a.model_dump(exclude_none=True)
@@ -352,11 +368,11 @@ def atualizar_redacao(rid: int, a: AtualizaRedacao):
                 f"UPDATE redacoes SET {sets}, atualizado_em = datetime('now', 'localtime') WHERE id = ?",
                 [*campos.values(), rid],
             )
-    return _redacao(rid)
+    return _redacao(con, rid)
 
 
 @app.delete("/api/redacoes/{rid}")
-def apagar_redacao(rid: int):
+def apagar_redacao(con: Con, rid: int):
     with con:
         n = con.execute("DELETE FROM redacoes WHERE id = ? AND aluno_id = ?", (rid, ALUNO_PADRAO)).rowcount
     if not n:
@@ -383,7 +399,7 @@ def _semana() -> str:
 
 
 @app.get("/api/plano")
-def ler_plano():
+def ler_plano(con: Con):
     cfg = con.execute("SELECT data_prova, horas_semana FROM plano WHERE aluno_id = ?", (ALUNO_PADRAO,)).fetchone()
     if not cfg:
         return {"configurado": False}
@@ -407,18 +423,18 @@ def ler_plano():
 
 
 @app.put("/api/plano")
-def configurar_plano(c: ConfigPlano):
+def configurar_plano(con: Con, c: ConfigPlano):
     with con:
         con.execute(
             "INSERT INTO plano (aluno_id, data_prova, horas_semana) VALUES (?, ?, ?) "
             "ON CONFLICT (aluno_id) DO UPDATE SET data_prova = excluded.data_prova, horas_semana = excluded.horas_semana",
             (ALUNO_PADRAO, c.data_prova.isoformat(), c.horas_semana),
         )
-    return ler_plano()
+    return ler_plano(con)
 
 
 @app.post("/api/plano/feito")
-def marcar_bloco(b: BlocoFeito):
+def marcar_bloco(con: Con, b: BlocoFeito):
     with con:
         if b.feito:
             con.execute("INSERT OR IGNORE INTO plano_feitos VALUES (?, ?, ?)", (ALUNO_PADRAO, _semana(), b.posicao))
@@ -446,7 +462,7 @@ class AtualizaSimulado(BaseModel):
     tempo_seg: int | None = Field(default=None, ge=0)
 
 
-def _questoes_do_dia(ano: int, dia: int, idioma: str) -> list[tuple[int, int]]:
+def _questoes_do_dia(con: sqlite3.Connection, ano: int, dia: int, idioma: str) -> list[tuple[int, int]]:
     """(id, número oficial), na ordem oficial: o 1º dia vai da questão 1 à 90 e o 2º da 91 à 180, em todos os anos."""
     inicio = 1 if dia == 1 else 91
     return [
@@ -459,7 +475,7 @@ def _questoes_do_dia(ano: int, dia: int, idioma: str) -> list[tuple[int, int]]:
     ]
 
 
-def _resultado(s: dict) -> dict:
+def _resultado(con: sqlite3.Connection, s: dict) -> dict:
     ids = s["questoes"]
     rows = con.execute(
         f"SELECT id, indice, area, gabarito FROM questoes WHERE id IN ({','.join('?' * len(ids))}) ORDER BY indice",
@@ -473,11 +489,11 @@ def _resultado(s: dict) -> dict:
         a["brancos"] += resposta is None
         a["acertos"] += resposta == r["gabarito"]
         itens.append({"id": r["id"], "indice": r["indice"], "area": r["area"], "resposta": resposta, "gabarito": r["gabarito"]})
-    _nota_tri(s["ano"], areas, itens)
+    _nota_tri(con, s["ano"], areas, itens)
     return {"areas": list(areas.values()), "itens": itens}
 
 
-def _nota_tri(ano: int, areas: dict, itens: list[dict]) -> None:
+def _nota_tri(con: sqlite3.Connection, ano: int, areas: dict, itens: list[dict]) -> None:
     """Nota TRI por área, só quando a escala passou na conferência contra as notas oficiais (ADR 0014)."""
     params = {
         r["questao_id"]: r
@@ -498,26 +514,26 @@ def _nota_tri(ano: int, areas: dict, itens: list[dict]) -> None:
         a["tri_questoes"] = len(usadas)
 
 
-def _simulado(sid: int) -> dict:
+def _simulado(con: sqlite3.Connection, sid: int) -> dict:
     row = con.execute("SELECT * FROM simulados WHERE id = ? AND aluno_id = ?", (sid, ALUNO_PADRAO)).fetchone()
     if not row:
         raise HTTPException(404, "Simulado não encontrado")
     s = dict(row) | {"respostas": json.loads(row["respostas"]), "marcadas": json.loads(row["marcadas"])}
-    pares = _questoes_do_dia(s["ano"], s["dia"], s["idioma"])
+    pares = _questoes_do_dia(con, s["ano"], s["dia"], s["idioma"])
     s["questoes"] = [qid for qid, _ in pares]
     s["numeros"] = [n for _, n in pares]  # numeração oficial, igual à do caderno
     s["duracao_seg"] = DURACAO_SEG[s["dia"]]
     if s["entregue"]:  # o gabarito só sai depois da entrega
-        s["resultado"] = _resultado(s)
+        s["resultado"] = _resultado(con, s)
     return s
 
 
 @app.get("/api/simulados")
-def listar_simulados():
+def listar_simulados(con: Con):
     ids = [r[0] for r in con.execute("SELECT id FROM simulados WHERE aluno_id = ? ORDER BY id DESC", (ALUNO_PADRAO,))]
     lista = []
     for sid in ids:
-        s = _simulado(sid)
+        s = _simulado(con, sid)
         acertos = sum(a["acertos"] for a in s["resultado"]["areas"]) if s["entregue"] else None
         lista.append({k: s[k] for k in ("id", "ano", "dia", "entregue", "criado_em", "tempo_seg")}
                      | {"total": len(s["questoes"]), "respondidas": len(s["respostas"]), "acertos": acertos})
@@ -525,8 +541,8 @@ def listar_simulados():
 
 
 @app.post("/api/simulados")
-def criar_simulado(n: NovoSimulado):
-    if not _questoes_do_dia(n.ano, n.dia, n.idioma):
+def criar_simulado(con: Con, n: NovoSimulado):
+    if not _questoes_do_dia(con, n.ano, n.dia, n.idioma):
         raise HTTPException(404, "Não há questões desse ano e dia no banco.")
     with con:
         sid = con.execute(
@@ -537,13 +553,13 @@ def criar_simulado(n: NovoSimulado):
 
 
 @app.get("/api/simulados/{sid}")
-def abrir_simulado(sid: int):
-    return _simulado(sid)
+def abrir_simulado(con: Con, sid: int):
+    return _simulado(con, sid)
 
 
 @app.patch("/api/simulados/{sid}")
-def atualizar_simulado(sid: int, a: AtualizaSimulado):
-    s = _simulado(sid)
+def atualizar_simulado(con: Con, sid: int, a: AtualizaSimulado):
+    s = _simulado(con, sid)
     if s["entregue"]:
         raise HTTPException(409, "Este simulado já foi entregue.")
     validas = set(s["questoes"])
@@ -566,20 +582,20 @@ def atualizar_simulado(sid: int, a: AtualizaSimulado):
 
 
 @app.post("/api/simulados/{sid}/entregar")
-def entregar_simulado(sid: int):
-    s = _simulado(sid)
+def entregar_simulado(con: Con, sid: int):
+    s = _simulado(con, sid)
     if s["entregue"]:
         raise HTTPException(409, "Este simulado já foi entregue.")
     with con:
         con.execute("UPDATE simulados SET entregue = 1 WHERE id = ?", (sid,))
         # As respostas entram no histórico: erros vão para o caderno de erros e para o painel.
-        for item in _resultado(s)["itens"]:
+        for item in _resultado(con, s)["itens"]:
             if item["resposta"]:
                 con.execute(
                     "INSERT INTO respostas (aluno_id, questao_id, alternativa, correta) VALUES (?, ?, ?, ?)",
                     (ALUNO_PADRAO, item["id"], item["resposta"], int(item["resposta"] == item["gabarito"])),
                 )
-    return _simulado(sid)
+    return _simulado(con, sid)
 
 
 app.mount("/imagens", StaticFiles(directory=IMAGENS_DIR), name="imagens")

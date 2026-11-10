@@ -133,14 +133,24 @@ CREATE TABLE IF NOT EXISTS simulados (
 TABELAS_ALUNO = ["alunos", "respostas", "redacoes", "plano", "plano_feitos", "simulados"]
 
 
-def conectar(pasta: Path = DATA_DIR) -> sqlite3.Connection:
-    pasta.mkdir(exist_ok=True)
-    migrar(pasta)
-    con = sqlite3.connect(pasta / "aluno.db", check_same_thread=False)
+def abrir(pasta: Path = DATA_DIR) -> sqlite3.Connection:
+    """Conexão nova com o banco de questões anexado. O servidor abre uma por requisição: conexões
+    compartilhadas entre threads misturariam as transações de alunos diferentes (modo escola)."""
+    # check_same_thread=False: o FastAPI pode abrir, usar e fechar a conexão em threads diferentes do pool,
+    # mas nunca ao mesmo tempo. timeout: espera o outro aluno terminar de gravar em vez de dar erro.
+    con = sqlite3.connect(pasta / "aluno.db", check_same_thread=False, timeout=15)
     con.row_factory = sqlite3.Row
     con.execute("ATTACH DATABASE ? AS banco", (str(pasta / "questoes.db"),))
     con.execute("PRAGMA foreign_keys = ON")
-    con.execute("PRAGMA main.journal_mode = WAL")
+    return con
+
+
+def conectar(pasta: Path = DATA_DIR) -> sqlite3.Connection:
+    """Prepara a pasta (migração e modo de diário) e abre uma conexão. Usar uma vez, ao iniciar."""
+    pasta.mkdir(exist_ok=True)
+    migrar(pasta)
+    con = abrir(pasta)
+    con.execute("PRAGMA main.journal_mode = WAL")  # fica gravado no arquivo; vale para as conexões seguintes
     # O banco de questões não usa WAL: o instalador troca o arquivo, e um -wal antigo ao lado o corromperia.
     con.execute("PRAGMA banco.journal_mode = DELETE")
     return con
