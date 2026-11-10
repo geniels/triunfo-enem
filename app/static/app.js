@@ -453,7 +453,8 @@ function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }
     }
   }
   document.addEventListener("keydown", teclado);
-  limparTela = () => { clearInterval(timer); document.removeEventListener("keydown", teclado); };
+  const desligarRascunho = Rascunho.ligar($(".questao"), `q${q.id}`, lista);
+  limparTela = () => { clearInterval(timer); document.removeEventListener("keydown", teclado); desligarRascunho(); };
 }
 
 /* ---------------------------- Caderno de erros ---------------------------- */
@@ -861,6 +862,7 @@ function fazerSimulado(s) {
       .join("");
   }
 
+  let desligarRascunho = null;
   async function mostrar(i) {
     atual = Math.min(Math.max(i, 0), s.questoes.length - 1);
     const qid = s.questoes[atual];
@@ -875,6 +877,7 @@ function fazerSimulado(s) {
         <button class="botao secundario" id="s-marcar" aria-pressed="${marcadas.has(qid)}">${marcadas.has(qid) ? "Desmarcar revisão" : "Marcar para revisar"}</button>
         <button class="botao" id="s-proxima" ${atual === s.questoes.length - 1 ? "disabled" : ""}>Próxima →</button>
       </div>`;
+    desligarRascunho = Rascunho.ligar($("#s-questao"), `s${s.id}-${qid}`, $("#alternativas"));
     $("#alternativas").querySelectorAll("button").forEach((b) => b.classList.toggle("escolhida", b.dataset.letra === s.respostas[qid]));
     $("#alternativas").onclick = (e) => {
       const b = e.target.closest("button");
@@ -948,6 +951,7 @@ function fazerSimulado(s) {
     clearInterval(t1);
     clearInterval(t2);
     document.removeEventListener("keydown", teclado);
+    desligarRascunho?.();
     salvar({});
   };
   mostrar(atual);

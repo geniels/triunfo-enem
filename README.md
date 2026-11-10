@@ -39,6 +39,8 @@ virão com *free code signing provided by [SignPath.io](https://signpath.io), ce
   estrangeira. Modos: questões novas, revisão do dia, refazer erros e todas.
 - **Gabarito só depois de responder**, cronômetro por questão (fica vermelho após 3 minutos, o ritmo da prova) e
   marcação de **por que errou**: conteúdo, atenção, tempo ou chute.
+- **Rascunho com caneta**: risque alternativas, sublinhe e faça contas por cima da questão, com Apple Pencil,
+  caneta do Windows, dedo ou mouse, como no caderno da prova.
 - **Caderno de erros** automático e **painel de desempenho** por área, com tempo médio, motivos dos erros e
   histórico dos últimos 14 dias.
 

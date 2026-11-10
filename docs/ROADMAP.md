@@ -18,7 +18,8 @@ v0.4.4 publicada. README com a assinatura pela SignPath e `PRIVACIDADE.md`, pron
 **Fase 4 em andamento: modo turma** (ADR 0022). Abrir turma, entrada com nome e PIN e lista de participantes estão prontos.
 Modo turma testado com outro dispositivo na rede (Firewall ok); lançado na **versão 0.5.0**. Candidatura à SignPath
 enviada em 2026-11-10 (aguardando resposta; depois, seguir `docs/ASSINATURA.md`).
-**Próximo passo:** rascunho com caneta (ver backlog) e painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
+**Rascunho com caneta** pronto na prática e no simulado (ADR 0023): caneta, marca-texto, borracha, desfazer; com caneta, o dedo rola.
+**Próximo passo:** testar o rascunho num iPad/caneta de verdade e publicar; depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -57,9 +58,7 @@ enviada em 2026-11-10 (aguardando resposta; depois, seguir `docs/ASSINATURA.md`)
 - 7 questões vêm com só 4 alternativas da fonte (ids 539, 783, 1305, 2256, 2326, 2475, 2497).
 
 ## Melhorias registradas (backlog)
-- **Rascunho com caneta** (próximo depois do modo turma): camada transparente sobre a questão para riscar, sublinhar e fazer
-  contas com caneta (Apple Pencil, caneta do Windows), dedo ou mouse; a caneta desenha e o dedo rola. Pointer Events + canvas,
-  sem biblioteca. Princípio: prática ativa, como no caderno da prova (ADR 0004). Precisa de ADR.
+- Rascunho: guardar junto com a resposta para revê-lo no caderno de erros (ADR 0023).
 - Teste automatizado do simulado (montagem do dia, validação das respostas, resultado), com banco temporário.
 - TRI: cobertura atual de 47 das 60 combinações ano/área (2009–2023). Sem nota: 2009 CN/CH, 2016 CN/CH/LC e 2017
   (a ordem do enem.dev não casa com nenhum caderno oficial); 2011 CN, 2013 MT, 2018 CN e 2019 MT (o ajuste não confere
