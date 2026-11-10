@@ -83,11 +83,11 @@ async function navegar() {
     mostrarQuemSou();
     if (!eu.aluno) return telaEntrar();
   }
-  const [rota, arg] = (location.hash.slice(1) || "inicio").split("/");
+  const [rota, ...args] = (location.hash.slice(1) || "inicio").split("/");
   document.querySelectorAll(".topo [data-rota]").forEach((a) => a.classList.toggle("ativo", a.dataset.rota === rota));
   conteudo.innerHTML = '<p class="carregando">Carregando…</p>';
   try {
-    await (rotas[rota] || telaInicio)(arg);
+    await (rotas[rota] || telaInicio)(...args);
   } catch (e) {
     if (e instanceof PrecisaEntrar) return;
     conteudo.innerHTML = `<div class="cartao erro"><h2>Algo deu errado</h2><p>${esc(e.message)}</p>
@@ -757,7 +757,8 @@ const NOME_DIA = {
 const relogio = (s) =>
   `${Math.floor(s / 3600)}:${String(Math.floor((s % 3600) / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
 
-async function telaSimulado(id) {
+async function telaSimulado(id, qid) {
+  if (id && qid) return revisarQuestaoSimulado(Number(id), Number(qid));
   if (id) return abrirSimulado(Number(id));
   const [f, lista] = await Promise.all([filtros(), api("/api/simulados")]);
   const p = prefs.ler();
@@ -998,11 +999,83 @@ function resultadoSimulado(s) {
         .map((it, i) => {
           const estado = !it.resposta ? "" : it.resposta === it.gabarito ? "certa" : "errada";
           const rotulo = !it.resposta ? "em branco" : estado === "certa" ? "certa" : `errada, marcou ${it.resposta}`;
-          return `<a class="q ${estado}" href="#questao/${it.id}" aria-label="Questão ${it.indice}: ${rotulo}, gabarito ${esc(it.gabarito)}">${it.indice}</a>`;
+          return `<a class="q ${estado}" href="#simulado/${s.id}/${it.id}" aria-label="Questão ${it.indice}: ${rotulo}, gabarito ${esc(it.gabarito)}">${it.indice}</a>`;
         })
         .join("")}</div>
       <div class="acoes"><a class="botao" href="#simulado">Voltar aos simulados</a></div>
     </section>`;
+}
+
+// Revisão de uma questão do simulado entregue: sua resposta, o gabarito e o seu rascunho, como você deixou.
+async function revisarQuestaoSimulado(sid, qid) {
+  const s = await api(`/api/simulados/${sid}`);
+  if (!s.entregue) {
+    location.hash = `#simulado/${sid}`; // o gabarito só sai depois da entrega
+    return;
+  }
+  const itens = s.resultado.itens;
+  const i = itens.findIndex((it) => it.id === qid);
+  if (i < 0) throw new Error("Essa questão não faz parte deste simulado.");
+  const it = itens[i];
+  const q = await api(`/api/questao/${qid}`);
+  const anterior = itens[i - 1], seguinte = itens[i + 1];
+  const situacao = !it.resposta ? "Você deixou em branco" : it.resposta === it.gabarito ? "Você acertou" : `Você marcou ${esc(it.resposta)}`;
+  // Mesmo layout do simulado (questão + cartão-resposta ao lado): a questão fica com a mesma largura e o
+  // rascunho, guardado em coordenadas relativas à largura, cai exatamente onde a pessoa riscou.
+  const grade = itens.map((x) => {
+    const estado = !x.resposta ? "" : x.resposta === x.gabarito ? "certa" : "errada";
+    const rotulo = !x.resposta ? "em branco" : estado === "certa" ? "certa" : `errada, marcou ${x.resposta}`;
+    const aqui = x.id === qid;
+    return `<a class="q ${estado}${aqui ? " atual" : ""}" href="#simulado/${sid}/${x.id}" ${aqui ? 'aria-current="page"' : ""}
+      aria-label="Questão ${x.indice}: ${rotulo}">${x.indice}</a>`;
+  }).join("");
+  conteudo.innerHTML = `
+    <div class="barra-questao">
+      <span class="etiqueta area-mat">Revisão</span>
+      <span>Simulado ENEM ${s.ano} · ${NOME_DIA[s.dia]}</span>
+    </div>
+    <p class="placar"><b>${situacao}</b> · gabarito ${esc(it.gabarito)}${s.marcadas.includes(qid) ? " · você marcou esta para revisar" : ""}</p>
+    <div class="simulado">
+      <article class="cartao questao" id="s-questao">
+        <p class="placar"><b>Questão ${it.indice}</b> · ${esc(q.area_nome.replace(" e suas Tecnologias", ""))}</p>
+        ${corpoQuestao(q)}
+        <div class="acoes">
+          <button class="botao secundario" id="r-anterior" ${anterior ? "" : "disabled"}>← Anterior</button>
+          <button class="botao secundario" id="r-proxima" ${seguinte ? "" : "disabled"}>Próxima →</button>
+        </div>
+      </article>
+      <aside class="cartao cartao-resposta" aria-label="Questões do simulado">
+        <h2>Questões</h2>
+        <div class="grade-cartao">${grade}</div>
+        <p class="legenda"><span class="q certa">1</span> certa <span class="q errada">2</span> errada <span class="q">3</span> em branco</p>
+        <a class="botao secundario" href="#simulado/${sid}">Voltar ao resultado</a>
+      </aside>
+    </div>
+    <p class="atalhos">Atalhos: <kbd>←</kbd> e <kbd>→</kbd> passam as questões.</p>`;
+
+  const selo = (texto) => `<span class="selo">${texto}</span>`;
+  const lista = $("#alternativas");
+  lista.querySelectorAll("button").forEach((b) => {
+    b.disabled = true;
+    if (b.dataset.letra === it.gabarito) {
+      b.classList.add("certa");
+      b.insertAdjacentHTML("beforeend", selo(it.resposta === it.gabarito ? "Correta · sua resposta" : "Correta"));
+    } else if (b.dataset.letra === it.resposta) {
+      b.classList.add("errada");
+      b.insertAdjacentHTML("beforeend", selo("Sua resposta"));
+    }
+  });
+  const ir = (outro) => outro && (location.hash = `#simulado/${sid}/${outro.id}`);
+  $("#r-anterior").onclick = () => ir(anterior);
+  $("#r-proxima").onclick = () => ir(seguinte);
+  function teclado(e) {
+    if (e.target.matches("input, select, textarea") || e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key === "ArrowLeft") ir(anterior);
+    else if (e.key === "ArrowRight") ir(seguinte);
+  }
+  document.addEventListener("keydown", teclado);
+  const desligarRascunho = Rascunho.ligar($("#s-questao"), `s${sid}-${qid}`, lista);
+  limparTela = () => { document.removeEventListener("keydown", teclado); desligarRascunho(); };
 }
 
 /* ---------------------------- Plano de estudos (ADR 0016) ---------------------------- */
@@ -1337,6 +1410,7 @@ function mostrarQuemSou() {
 function telaEntrar() {
   limparTela?.();
   limparTela = null;
+  Rascunho.esquecer();
   mostrarQuemSou();
   let primeira = false;
   conteudo.innerHTML = `

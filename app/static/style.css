@@ -365,3 +365,6 @@ body:has(.rascunho-barra:not([hidden])) .conteudo { padding-bottom: 5.5rem; }
 .rascunho-ferramentas button { display: flex; align-items: center; gap: .35rem; padding: .45rem .8rem; }
 .rascunho-ferramentas button[aria-pressed="true"] { outline: 3px solid var(--primaria); outline-offset: 1px; }
 @media (max-width: 1240px) { .rascunho-ferramentas { flex-direction: row; } .rascunho-ferramentas span { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); } }
+.rascunho-aviso { margin: 0; max-width: 18rem; padding: .5rem .75rem; border-radius: 10px; background: var(--nao-fundo);
+  color: var(--texto); border: 1px solid var(--nao); font-size: .9rem; }
+.q.atual { outline: 3px solid var(--texto); outline-offset: 2px; }

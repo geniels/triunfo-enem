@@ -13,6 +13,7 @@ from datetime import date, timedelta
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Path as FPath
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
@@ -623,6 +624,55 @@ def entregar_simulado(con: Con, aluno: Aluno, sid: int):
     return _simulado(con, aluno, sid)
 
 
+# ---------------------------- Rascunho com caneta (ADR 0023) ----------------------------
+
+CHAVE_RASCUNHO = r"^(q\d{1,9}|s\d{1,9}-\d{1,9})$"
+LIMITE_RASCUNHO = 400_000  # bytes de JSON por questão: muito acima de uma página cheia de contas
+
+
+class Traco(BaseModel):
+    tipo: Literal["caneta", "marca"]
+    pressao: float = Field(default=1, ge=0, le=3)
+    pontos: list[tuple[float, float]] = Field(max_length=20_000)
+
+
+class NovoRascunho(BaseModel):
+    tracos: list[Traco] = Field(max_length=2_000)
+
+
+def _rascunho_permitido(con: sqlite3.Connection, aluno: int, chave: str) -> None:
+    if chave.startswith("s"):  # o simulado precisa ser do próprio aluno
+        sid = int(chave[1:].split("-")[0])
+        if not con.execute("SELECT 1 FROM simulados WHERE id = ? AND aluno_id = ?", (sid, aluno)).fetchone():
+            raise HTTPException(404, "Simulado não encontrado")
+
+
+@app.get("/api/rascunhos/{chave}")
+def ler_rascunho(con: Con, aluno: Aluno, chave: str = FPath(pattern=CHAVE_RASCUNHO)):
+    _rascunho_permitido(con, aluno, chave)
+    r = con.execute("SELECT tracos FROM rascunhos WHERE aluno_id = ? AND chave = ?", (aluno, chave)).fetchone()
+    return {"tracos": json.loads(r[0]) if r else []}
+
+
+@app.put("/api/rascunhos/{chave}")
+def salvar_rascunho(n: NovoRascunho, con: Con, aluno: Aluno, chave: str = FPath(pattern=CHAVE_RASCUNHO)):
+    _rascunho_permitido(con, aluno, chave)
+    tracos = [{"tipo": t.tipo, "pressao": round(t.pressao, 2), "pontos": [[round(x, 4), round(y, 4)] for x, y in t.pontos]}
+              for t in n.tracos]
+    texto = json.dumps(tracos, separators=(",", ":"))
+    if len(texto) > LIMITE_RASCUNHO:
+        raise HTTPException(413, "Rascunho grande demais para uma questão. Use Limpar e continue.")
+    with con:
+        if tracos:
+            con.execute(
+                "INSERT INTO rascunhos (aluno_id, chave, tracos) VALUES (?, ?, ?) ON CONFLICT (aluno_id, chave) "
+                "DO UPDATE SET tracos = excluded.tracos, atualizado_em = datetime('now', 'localtime')",
+                (aluno, chave, texto))
+        else:
+            con.execute("DELETE FROM rascunhos WHERE aluno_id = ? AND chave = ?", (aluno, chave))
+    return {"ok": True}
+
+
 # ---------------------------- Modo turma (ADR 0022) ----------------------------
 
 class Acesso(BaseModel):
@@ -728,7 +778,7 @@ def remover_participante(pid: int, con: Con):
     """Apaga o participante e todo o progresso dele."""
     _participante(con, pid)
     with con:
-        for tabela in ("respostas", "redacoes", "plano", "plano_feitos", "simulados"):
+        for tabela in ("respostas", "redacoes", "plano", "plano_feitos", "simulados", "rascunhos"):
             con.execute(f"DELETE FROM {tabela} WHERE aluno_id = ?", (pid,))
         con.execute("DELETE FROM alunos WHERE id = ?", (pid,))
     return {"ok": True}

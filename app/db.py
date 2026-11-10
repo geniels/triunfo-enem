@@ -134,8 +134,17 @@ CREATE TABLE IF NOT EXISTS simulados (
     entregue    INTEGER NOT NULL DEFAULT 0,
     criado_em   TEXT    NOT NULL DEFAULT (datetime('now', 'localtime'))
 );
+
+-- Rascunho com caneta (ADR 0023): traços por questão. chave = "q<questão>" na prática ou "s<simulado>-<questão>".
+CREATE TABLE IF NOT EXISTS rascunhos (
+    aluno_id       INTEGER NOT NULL REFERENCES alunos(id),
+    chave          TEXT    NOT NULL,
+    tracos         TEXT    NOT NULL,   -- JSON [{tipo, pressao, pontos: [[x, y], ...]}], coordenadas / largura
+    atualizado_em  TEXT    NOT NULL DEFAULT (datetime('now', 'localtime')),
+    PRIMARY KEY (aluno_id, chave)
+);
 """
-TABELAS_ALUNO = ["alunos", "config", "respostas", "redacoes", "plano", "plano_feitos", "simulados"]
+TABELAS_ALUNO = ["alunos", "config", "respostas", "redacoes", "plano", "plano_feitos", "simulados", "rascunhos"]
 
 
 def abrir(pasta: Path = DATA_DIR) -> sqlite3.Connection:

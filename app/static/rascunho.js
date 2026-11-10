@@ -4,10 +4,25 @@
 
    - Quando aparece uma caneta, só ela desenha e o dedo rola a página. Sem caneta, dedo e mouse desenham.
    - Os traços são guardados em coordenadas relativas à largura: redesenham certo ao mudar o tamanho da tela.
-   - Ficam na memória enquanto a página está aberta (no simulado, ao ir e voltar entre questões). Nada vai ao servidor.
+   - São salvos no aluno.db (do aluno; no modo turma, no PC do organizador) pouco depois de cada traço e ao sair
+     da questão. Voltam quando a questão reaparece: na prática, revisão, caderno de erros e revisão do simulado.
 */
 const Rascunho = (() => {
-  const guardados = new Map(); // chave -> { tracos: [], historico: [] }
+  const guardados = new Map(); // chave -> { tracos, historico, carregado } (cache da página)
+  const ESPERA_SALVAR_MS = 1500;
+
+  function enviar(chave, dados) {
+    const corpo = JSON.stringify({ tracos: dados.tracos.map(({ tipo, pressao, pontos }) => ({ tipo, pressao, pontos })) });
+    // keepalive: o salvamento termina mesmo se a pessoa fechar a aba logo depois do último traço.
+    return fetch(`/api/rascunhos/${chave}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: corpo, keepalive: corpo.length < 60000 })
+      .then((r) => avisar(r.ok ? "" : r.status === 413 ? "Rascunho grande demais nesta questão: use Limpar." : "Não foi possível guardar o rascunho."))
+      .catch(() => avisar("Não foi possível guardar o rascunho. Ele continua aqui enquanto a página estiver aberta."));
+  }
+
+  function avisar(texto) {
+    const a = document.querySelector("#rascunho-barra .rascunho-aviso");
+    if (a) { a.textContent = texto; a.hidden = !texto; }
+  }
   let temCaneta = false;
   let ferramenta = "caneta";
   let aberto = false;
@@ -40,6 +55,7 @@ const Rascunho = (() => {
         <button type="button" data-a="desfazer" title="Desfazer">↶<span>Desfazer</span></button>
         <button type="button" data-a="limpar" title="Apagar todo o rascunho desta questão">🗑️<span>Limpar</span></button>
       </div>
+      <p class="rascunho-aviso" role="status" hidden></p>
       <button type="button" class="rascunho-abrir" aria-pressed="false" aria-expanded="false">✏️ Rascunho</button>`;
     document.body.append(b);
     b.onclick = (e) => {
@@ -70,8 +86,21 @@ const Rascunho = (() => {
      de confirmar continuarem clicáveis. Devolve a função que desliga. */
   function ligar(area, chave, ate) {
     atual?.desligar();
-    const dados = guardados.get(chave) || { tracos: [], historico: [] };
+    const dados = guardados.get(chave) || { tracos: [], historico: [], carregado: false, carregando: null };
     guardados.set(chave, dados);
+    let timer = null;
+    const mudou = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => { timer = null; enviar(chave, dados); }, ESPERA_SALVAR_MS);
+    };
+    // Um carregamento por questão, mesmo se a tela for desenhada duas vezes; quando chega, desenha na camada
+    // que estiver ligada para esta chave (a que começou o carregamento pode já ter sido trocada).
+    dados.carregando ??= fetch(`/api/rascunhos/${chave}`).then((r) => (r.ok ? r.json() : null)).then((d) => {
+      if (!d) return;
+      dados.carregado = true;
+      dados.tracos = [...d.tracos, ...dados.tracos]; // traços feitos enquanto carregava ficam por cima
+    }).catch(() => {});
+    dados.carregando.then(() => { if (atual === camada) desenhar(); });
     const canvas = document.createElement("canvas");
     canvas.className = "rascunho-camada";
     canvas.setAttribute("aria-hidden", "true");
@@ -124,6 +153,7 @@ const Rascunho = (() => {
       dados.tracos = dados.tracos.filter((t) => !tocados.includes(t));
       dados.historico.push({ apagou: tocados });
       desenhar();
+      mudou();
     }
 
     let traco = null, rolando = null;
@@ -154,7 +184,11 @@ const Rascunho = (() => {
       eventos.forEach((x) => traco.pontos.push(ponto(x)));
       desenhar();
     });
-    const soltar = () => { traco = null; rolando = null; };
+    const soltar = () => {
+      if (traco && !traco.borracha) mudou();
+      traco = null;
+      rolando = null;
+    };
     canvas.addEventListener("pointerup", soltar);
     canvas.addEventListener("pointercancel", soltar);
 
@@ -174,14 +208,17 @@ const Rascunho = (() => {
         if (passo.fez) dados.tracos = dados.tracos.filter((t) => t !== passo.fez);
         else dados.tracos.push(...passo.apagou);
         desenhar();
+        mudou();
       },
       limpar() {
         if (!dados.tracos.length) return;
         dados.historico.push({ apagou: dados.tracos });
         dados.tracos = [];
         desenhar();
+        mudou();
       },
       desligar() {
+        if (timer) { clearTimeout(timer); timer = null; enviar(chave, dados); } // salva o que faltava
         observador.disconnect();
         tema.disconnect();
         canvas.remove();
@@ -203,5 +240,8 @@ const Rascunho = (() => {
     };
   }
 
-  return { ligar };
+  // Troca de pessoa no modo turma: o cache da página não pode mostrar o rascunho de outra.
+  const esquecer = () => guardados.clear();
+
+  return { ligar, esquecer };
 })();
