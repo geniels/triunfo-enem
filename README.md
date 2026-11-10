@@ -8,7 +8,7 @@ estudar, quando revisar e como se sair melhor no dia da prova.
 
 O material para estudar para o ENEM está espalhado, muitas vezes é pago e quase sempre exige internet boa. O TRIunfo
 reúne as provas oficiais num só lugar, roda em computadores modestos e **funciona sem internet**. Foi pensado para
-ser usado por estudantes sozinhos e, no futuro, por escolas e redes públicas: um PC pode atender uma sala inteira.
+ser usado por estudantes sozinhos e, no futuro, em turma (escolas, cursinhos ou amigos): um PC pode atender uma sala inteira.
 
 O nome junta a **TRI** (Teoria de Resposta ao Item, o método de correção do ENEM) com "triunfo".
 
@@ -24,6 +24,13 @@ primeiro minuto**. Para atualizar, instale a versão nova por cima: seu progress
 > O Windows pode mostrar "O Windows protegeu o computador", porque o instalador ainda não tem assinatura digital.
 > Clique em **Mais informações** e depois em **Executar assim mesmo**. Para conferir o arquivo, compare o SHA-256
 > publicado junto com a versão.
+
+### Assinatura de código
+
+O instalador é gerado de forma automática e pública no GitHub Actions, a partir deste repositório. O projeto está
+se candidatando à assinatura gratuita para código aberto da **SignPath Foundation**: depois de aprovado, as versões
+virão com *free code signing provided by [SignPath.io](https://signpath.io), certificate by
+[SignPath Foundation](https://signpath.org)*.
 
 ## O que o TRIunfo faz
 
@@ -71,15 +78,16 @@ por cor.
 
 Tudo fica no computador do aluno: respostas, redações e plano de estudos não são enviados a lugar nenhum. A internet
 só é usada quando o aluno pede (verificar atualizações) ou na primeira preparação para desenvolvedores. Nenhum dado
-de estudante vai para serviços que o usem para treinar inteligência artificial (LGPD).
+de estudante vai para serviços que o usem para treinar inteligência artificial (LGPD). Detalhes na
+[política de privacidade](PRIVACIDADE.md).
 
 ## Edições
 
-| | Estudante | Escola (em desenvolvimento) |
+| | Estudante | Modo turma (em desenvolvimento) |
 |---|---|---|
-| Quem instala | O próprio aluno ou a família | Professor ou responsável pelo laboratório |
-| Administração | Nenhuma: instalar, abrir e usar | Configura uma vez: rede, turmas, recursos |
-| Onde roda | No PC do aluno | Um PC serve a sala pela rede |
+| Para quem | Quem estuda sozinho | Uma escola, um cursinho ou um grupo de amigos que estudam juntos |
+| Quem organiza | Ninguém: instalar, abrir e usar | O organizador (professor ou um dos amigos) abre a turma no seu PC |
+| Como entra | Direto | Pelo navegador, na mesma rede Wi-Fi, com nome e PIN de 4 dígitos |
 
 ## Roteiro
 
@@ -88,7 +96,7 @@ de estudante vai para serviços que o usem para treinar inteligência artificial
 | 1 | Banco de questões, prática, caderno de erros, painel | ✅ |
 | 2 | Simulado, nota TRI oficial, revisão espaçada, plano de estudos | ✅ |
 | 3 | Redação: temas, escrita e autoavaliação ✅ · correção por IA local, opcional ⏳ | ▶️ |
-| 4 | Modo escola: vários alunos na rede local, painel do professor | ⏳ |
+| 4 | Modo turma: estudar em grupo na rede local, painel do organizador | ⏳ |
 | 5 | Instalador da edição Estudante ✅ · atualização em 1 clique ✅ · provas 2024/2025, questões por assunto ⏳ | ▶️ |
 
 O roteiro detalhado e as decisões do projeto estão em [docs/ROADMAP.md](docs/ROADMAP.md) e [docs/adr/](docs/adr/README.md).
