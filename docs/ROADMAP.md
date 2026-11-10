@@ -16,9 +16,9 @@ Versão 0.4.4: identidade visual nova (ADR 0020) chega ao instalador (a 0.4.3 sa
 SQLite por requisição (1º pré-requisito do modo escola).
 v0.4.4 publicada. README com a assinatura pela SignPath e `PRIVACIDADE.md`, prontos para a candidatura.
 **Fase 4 em andamento: modo turma** (ADR 0022). Abrir turma, entrada com nome e PIN e lista de participantes estão prontos.
-Modo turma testado com outro dispositivo na rede (Firewall ok); versão 0.5.0 pronta. Candidatura à SignPath
+Modo turma testado com outro dispositivo na rede (Firewall ok); lançado na **versão 0.5.0**. Candidatura à SignPath
 enviada em 2026-11-10 (aguardando resposta; depois, seguir `docs/ASSINATURA.md`).
-**Próximo passo:** publicar a v0.5.0; rascunho com caneta (ver backlog) e painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
+**Próximo passo:** rascunho com caneta (ver backlog) e painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
