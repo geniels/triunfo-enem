@@ -21,7 +21,8 @@ enviada em 2026-11-10 (aguardando resposta; depois, seguir `docs/ASSINATURA.md`)
 **Rascunho com caneta** pronto na prática e no simulado (ADR 0023): caneta, marca-texto, borracha, desfazer; com caneta, o dedo rola.
 O rascunho fica salvo no `aluno.db` e volta na prática, no caderno de erros e na nova **revisão do simulado entregue**
 (resposta, gabarito e rascunho de cada questão).
-**Próximo passo:** testar o rascunho num iPad/caneta de verdade e publicar; depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
+Rascunho e revisão do simulado publicados na **versão 0.5.1**.
+**Próximo passo:** testar o rascunho num iPad/caneta de verdade; painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
