@@ -19,11 +19,12 @@ from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi import Path as FPath
+from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from app import guia, plano, redacao, revisao, tri, turma, versao
+from app import guia, imagens, plano, redacao, revisao, tri, turma, versao
 from app.db import AREAS, IMAGENS_DIR, RAIZ, abrir, conectar, criar_tabelas
 
 STATIC_DIR = RAIZ / "app" / "static"
@@ -34,6 +35,7 @@ _inicial.close()
 IMAGENS_DIR.mkdir(parents=True, exist_ok=True)
 
 app = FastAPI(title="TRIunfo", version=versao.VERSAO)
+app.add_middleware(GZipMiddleware, minimum_size=1000)  # app.js, CSS e JSON grandes viajam comprimidos no Wi-Fi
 
 
 def banco():
@@ -119,8 +121,11 @@ async def protecao_e_cache(request: Request, call_next):
     if int(request.headers.get("content-length") or 0) > LIMITE_PEDIDO:
         return JSONResponse({"detail": "Pedido grande demais."}, 413)
     resposta = await call_next(request)
-    # Força o navegador a conferir (304 é barato): sem isso, uma atualização do app não aparece para o aluno.
-    resposta.headers["Cache-Control"] = "no-cache"
+    # Imagens das questões: nunca mudam (prova oficial), então o navegador guarda e não pergunta de novo; com uma sala
+    # inteira no mesmo PC, eram centenas de revalidações. O resto: o navegador confere (304 é barato), senão uma
+    # atualização do app não aparece para o aluno.
+    imutavel = request.url.path.startswith("/imagens/") and resposta.status_code == 200
+    resposta.headers["Cache-Control"] = "public, max-age=31536000, immutable" if imutavel else "no-cache"
     resposta.headers["Content-Security-Policy"] = CSP
     resposta.headers["X-Frame-Options"] = "DENY"
     resposta.headers["X-Content-Type-Options"] = "nosniff"
@@ -248,7 +253,9 @@ def _revisoes(con: sqlite3.Connection, aluno: int) -> dict:
     """Questões com revisão para hoje (mais fáceis primeiro) e quantas vencem nos próximos 7 dias."""
     historico = defaultdict(list)
     for qid, dia, correta in con.execute(
-        "SELECT questao_id, date(criado_em), correta FROM respostas WHERE aluno_id = ? ORDER BY id", (aluno,)
+        # Só questões que já tiveram erro: as outras nunca entram na revisão (revisao.proxima devolve None).
+        "SELECT questao_id, date(criado_em), correta FROM respostas WHERE aluno_id = ? AND questao_id IN "
+        "(SELECT questao_id FROM respostas WHERE aluno_id = ? AND correta = 0) ORDER BY id", (aluno, aluno)
     ):
         historico[qid].append((dia, bool(correta)))
     hoje = date.today()
@@ -269,6 +276,10 @@ def resumo_revisao(con: Con, aluno: Aluno):
     return {"hoje": len(r["hoje"]), "proximos_7_dias": r["proximos_7_dias"]}
 
 
+def _com_questao(con: sqlite3.Connection, qid: int | None, restantes: int) -> dict:
+    return {"id": qid, "restantes": restantes, "questao": questao(con, qid) if qid else None}
+
+
 class PedidoProxima(BaseModel):
     area: str | None = None
     ano: int | None = None
@@ -284,7 +295,7 @@ def proxima(p: PedidoProxima, con: Con, aluno: Aluno):
     if modo == "revisao":  # ordem fixa: as mais fáceis primeiro (ADR 0015)
         vistas = set(excluir)
         fila = [q for q in _revisoes(con, aluno)["hoje"] if q not in vistas]
-        return {"id": fila[0] if fila else None, "restantes": len(fila)}
+        return _com_questao(con, fila[0] if fila else None, len(fila))
     where, params = filtro_sql(area, ano, idioma)
     if modo == "novas":
         where += " AND q.id NOT IN (SELECT questao_id FROM respostas WHERE aluno_id = ?)"
@@ -303,8 +314,9 @@ def proxima(p: PedidoProxima, con: Con, aluno: Aluno):
         params.append(json.dumps(excluir))
 
     row = con.execute(f"SELECT q.id FROM questoes q WHERE {where} ORDER BY RANDOM() LIMIT 1", params).fetchone()
+    # A questão vem junto (sem gabarito): uma ida e volta a menos por questão no Wi-Fi da turma.
     restantes = con.execute(f"SELECT COUNT(*) FROM questoes q WHERE {where}", params).fetchone()[0]
-    return {"id": row[0] if row else None, "restantes": restantes}
+    return _com_questao(con, row[0] if row else None, restantes)
 
 
 @app.get("/api/questao/{qid}")
@@ -328,6 +340,8 @@ def questao(con: Con, qid: int):
         "introducao": q["introducao"],
         "arquivos": json.loads(q["arquivos"] or "[]"),
         "alternativas": [dict(a) for a in alts],
+        "dimensoes": imagens.da_questao(q["contexto"], q["introducao"], q["arquivos"],
+                                        *(a["texto"] for a in alts), *(a["arquivo"] for a in alts)),
     }
 
 
@@ -653,24 +667,40 @@ def _simulado(con: sqlite3.Connection, aluno: int, sid: int) -> dict:
     if not row:
         raise HTTPException(404, "Simulado não encontrado")
     s = dict(row) | {"respostas": json.loads(row["respostas"]), "marcadas": json.loads(row["marcadas"])}
+    guardado = s.pop("resultado")
     pares = _questoes_do_dia(con, s["ano"], s["dia"], s["idioma"])
     s["questoes"] = [qid for qid, _ in pares]
     s["numeros"] = [n for _, n in pares]  # numeração oficial, igual à do caderno
     s["duracao_seg"] = DURACAO_SEG[s["dia"]]
     if s["entregue"]:  # o gabarito só sai depois da entrega
-        s["resultado"] = _resultado(con, s)
+        s["resultado"] = json.loads(guardado) if guardado else _guardar_resultado(con, s)
     return s
+
+
+def _guardar_resultado(con: sqlite3.Connection, s: dict) -> dict:
+    """Calcula o resultado (com a nota TRI) uma vez e guarda: antes, era refeito a cada abertura e a cada questão
+    da revisão. Simulados entregues antes desta versão são guardados na primeira vez que abrem."""
+    resultado = _resultado(con, s)
+    with con:
+        con.execute("UPDATE simulados SET resultado = ? WHERE id = ?", (json.dumps(resultado), s["id"]))
+    return resultado
 
 
 @app.get("/api/simulados")
 def listar_simulados(con: Con, aluno: Aluno):
-    ids = [r[0] for r in con.execute("SELECT id FROM simulados WHERE aluno_id = ? ORDER BY id DESC", (aluno,))]
-    lista = []
-    for sid in ids:
-        s = _simulado(con, aluno, sid)
-        acertos = sum(a["acertos"] for a in s["resultado"]["areas"]) if s["entregue"] else None
-        lista.append({k: s[k] for k in ("id", "ano", "dia", "entregue", "criado_em", "tempo_seg")}
-                     | {"total": len(s["questoes"]), "respondidas": len(s["respostas"]), "acertos": acertos})
+    """Sem recalcular resultados: usa o guardado na entrega (antes, a nota TRI de cada simulado era refeita aqui)."""
+    lista, totais = [], {}
+    for r in con.execute("SELECT id, ano, dia, idioma, entregue, criado_em, tempo_seg, respostas, resultado "
+                         "FROM simulados WHERE aluno_id = ? ORDER BY id DESC", (aluno,)).fetchall():
+        dia = (r["ano"], r["dia"], r["idioma"])
+        if dia not in totais:
+            totais[dia] = len(_questoes_do_dia(con, *dia))
+        acertos = None
+        if r["entregue"]:
+            resultado = json.loads(r["resultado"]) if r["resultado"] else _simulado(con, aluno, r["id"])["resultado"]
+            acertos = sum(a["acertos"] for a in resultado["areas"])
+        lista.append({k: r[k] for k in ("id", "ano", "dia", "entregue", "criado_em", "tempo_seg")}
+                     | {"total": totais[dia], "respondidas": len(json.loads(r["respostas"])), "acertos": acertos})
     return lista
 
 
@@ -724,9 +754,10 @@ def entregar_simulado(con: Con, aluno: Aluno, sid: int):
         s = _simulado(con, aluno, sid)
         if s["entregue"]:
             raise HTTPException(409, "Este simulado já foi entregue.")
-        con.execute("UPDATE simulados SET entregue = 1 WHERE id = ?", (sid,))
+        resultado = _resultado(con, s)
+        con.execute("UPDATE simulados SET entregue = 1, resultado = ? WHERE id = ?", (json.dumps(resultado), sid))
         # As respostas entram no histórico: erros vão para o caderno de erros e para o painel.
-        for item in _resultado(con, s)["itens"]:
+        for item in resultado["itens"]:
             if item["resposta"]:
                 con.execute(
                     "INSERT INTO respostas (aluno_id, questao_id, alternativa, correta) VALUES (?, ?, ?, ?)",

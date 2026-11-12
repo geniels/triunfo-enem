@@ -84,10 +84,15 @@ async function navegar() {
   limparTela?.();
   limparTela = null;
   if (eu.modo === "turma") {
-    // Confere a cada tela: o organizador pode ter gerado um PIN novo ou removido o participante.
-    eu = await fetch("/api/turma/eu").then((r) => r.json()).catch(() => eu);
-    mostrarQuemSou();
     if (!eu.aluno) return telaEntrar();
+    // Confere a cada tela, em paralelo (antes, a tela esperava essa ida e volta): o organizador pode ter gerado
+    // um PIN novo ou removido o participante. Os dados da pessoa já pedem login sozinhos (401).
+    const minha = geracao;
+    fetch("/api/turma/eu").then((r) => r.json()).then((d) => {
+      eu = d;
+      mostrarQuemSou();
+      if (!eu.aluno && minha === geracao) telaEntrar();
+    }).catch(() => {});
   }
   const [rota, ...args] = (location.hash.slice(1) || "inicio").split("/");
   document.querySelectorAll(".topo [data-rota]").forEach((a) => a.classList.toggle("ativo", a.dataset.rota === rota));
@@ -291,7 +296,7 @@ async function carregarProxima() {
   const r = await post("/api/proxima", { area: area || null, ano: ano ? +ano : null, idioma, modo, excluir: sessao.vistas });
   if (!r.id) return false;
   sessao.restantes = r.restantes;
-  sessao.atual = await api("/api/questao/" + r.id);
+  sessao.atual = r.questao; // vem junto com a próxima: uma ida e volta a menos
   sessao.vistas.push(r.id);
   mostrarQuestaoDaSessao();
   return true;
@@ -325,16 +330,18 @@ async function telaQuestaoAvulsa(id) {
 function corpoQuestao(q) {
   const textoTodo = (q.contexto || "") + (q.introducao || "");
   const extras = q.arquivos.filter((a) => !textoTodo.includes(a));
+  const d = q.dimensoes || {};
+  const tam = (url) => (d[url] ? ` width="${d[url][0]}" height="${d[url][1]}"` : "");
   return `
-      <div class="texto">${markdown(q.contexto)}</div>
-      ${extras.map((a) => `<img src="${esc(a)}" alt="Imagem da questão" loading="lazy">`).join("")}
-      <div class="enunciado">${markdown(q.introducao)}</div>
+      <div class="texto">${markdown(q.contexto, d)}</div>
+      ${extras.map((a) => `<img src="${esc(a)}"${tam(a)} alt="Imagem da questão" loading="lazy">`).join("")}
+      <div class="enunciado">${markdown(q.introducao, d)}</div>
       <ol class="alternativas" id="alternativas">
         ${q.alternativas
           .map(
             (a) => `<li><button type="button" data-letra="${esc(a.letra)}">
               <span class="letra">${esc(a.letra)}</span>
-              <span class="alt-texto">${a.texto ? markdown(a.texto) : ""}${a.arquivo ? `<img src="${esc(a.arquivo)}" alt="Alternativa ${esc(a.letra)}">` : ""}</span>
+              <span class="alt-texto">${a.texto ? markdown(a.texto, d) : ""}${a.arquivo ? `<img src="${esc(a.arquivo)}"${tam(a.arquivo)} alt="Alternativa ${esc(a.letra)}">` : ""}</span>
             </button></li>`
           )
           .join("")}
@@ -861,26 +868,40 @@ function fazerSimulado(s) {
           if (aviso) aviso.textContent = "Não foi possível salvar agora; tente de novo.";
         });
 
-  function atualizarGrade() {
+  function botaoGrade(i) {
+    const qid = s.questoes[i];
+    const estado = [s.respostas[qid] && "respondida", marcadas.has(qid) && "marcada", i === atual && "atual"].filter(Boolean);
+    return `<button type="button" class="q ${estado.join(" ")}" data-i="${i}"
+      aria-label="Questão ${s.numeros[i]}${s.respostas[qid] ? ", resposta " + esc(s.respostas[qid]) : ", em branco"}${marcadas.has(qid) ? ", marcada" : ""}"
+      ${i === atual ? 'aria-current="true"' : ""}>${s.numeros[i]}</button>`;
+  }
+
+  // Refaz só os botões indicados (antes, os 90 a cada toque); a primeira vez desenha a grade inteira.
+  function atualizarGrade(...indices) {
     const n = Object.keys(s.respostas).length;
     $("#s-progresso").textContent = `${n} de ${s.questoes.length} respondidas · ${marcadas.size} marcadas para revisar`;
-    $("#s-grade").innerHTML = s.questoes
-      .map((qid, i) => {
-        const estado = [s.respostas[qid] && "respondida", marcadas.has(qid) && "marcada", i === atual && "atual"].filter(Boolean);
-        return `<button type="button" class="q ${estado.join(" ")}" data-i="${i}"
-          aria-label="Questão ${s.numeros[i]}${s.respostas[qid] ? ", resposta " + s.respostas[qid] : ", em branco"}${marcadas.has(qid) ? ", marcada" : ""}"
-          ${i === atual ? 'aria-current="true"' : ""}>${s.numeros[i]}</button>`;
-      })
-      .join("");
+    const grade = $("#s-grade");
+    if (!grade.children.length) {
+      grade.innerHTML = s.questoes.map((_, i) => botaoGrade(i)).join("");
+      return;
+    }
+    for (const i of new Set(indices)) {
+      const velho = grade.children[i];
+      if (!velho) continue;
+      const tinhaFoco = document.activeElement === velho;
+      velho.outerHTML = botaoGrade(i);
+      if (tinhaFoco) grade.children[i].focus();
+    }
   }
 
   let desligarRascunho = null;
   let pronta = false; // a questão de "atual" está na tela: só então dá para responder ou marcar
   async function mostrar(i) {
+    const anterior = atual;
     atual = Math.min(Math.max(i, 0), s.questoes.length - 1);
     const qid = s.questoes[atual];
     pronta = false;
-    atualizarGrade();
+    atualizarGrade(anterior, atual);
     let q;
     try {
       q = await buscar(qid);
@@ -921,7 +942,7 @@ function fazerSimulado(s) {
     if (nova) s.respostas[qid] = nova;
     else delete s.respostas[qid];
     $("#alternativas").querySelectorAll("button").forEach((b) => b.classList.toggle("escolhida", b.dataset.letra === nova));
-    atualizarGrade();
+    atualizarGrade(atual);
     salvar({ respostas: { [qid]: nova } });
   }
 
@@ -930,7 +951,11 @@ function fazerSimulado(s) {
     const qid = s.questoes[atual];
     marcadas.has(qid) ? marcadas.delete(qid) : marcadas.add(qid);
     salvar({ marcadas: [...marcadas] });
-    mostrar(atual);
+    // Só o botão e a grade: redesenhar a questão recarregava imagens e o rascunho.
+    const b = $("#s-marcar");
+    b.setAttribute("aria-pressed", marcadas.has(qid));
+    b.textContent = marcadas.has(qid) ? "Desmarcar revisão" : "Marcar para revisar";
+    atualizarGrade(atual);
   }
 
   $("#s-grade").onclick = (e) => {
@@ -1042,8 +1067,13 @@ function resultadoSimulado(s) {
 }
 
 // Revisão de uma questão do simulado entregue: sua resposta, o gabarito e o seu rascunho, como você deixou.
+// Simulado entregue não muda: guardado enquanto a pessoa passa pelas questões dele (antes, buscado a cada questão).
+let revisaoGuardada = null; // { sid, s }
+
 async function revisarQuestaoSimulado(sid, qid) {
-  const s = await api(`/api/simulados/${sid}`);
+  const guardado = revisaoGuardada?.sid === sid ? revisaoGuardada.s : null;
+  const [s, q] = await Promise.all([guardado || api(`/api/simulados/${sid}`), api(`/api/questao/${qid}`)]);
+  if (s.entregue) revisaoGuardada = { sid, s };
   if (!s.entregue) {
     location.hash = `#simulado/${sid}`; // o gabarito só sai depois da entrega
     return;
@@ -1052,7 +1082,6 @@ async function revisarQuestaoSimulado(sid, qid) {
   const i = itens.findIndex((it) => it.id === qid);
   if (i < 0) throw new Error("Essa questão não faz parte deste simulado.");
   const it = itens[i];
-  const q = await api(`/api/questao/${qid}`);
   const anterior = itens[i - 1], seguinte = itens[i + 1];
   const situacao = !it.resposta ? "Você deixou em branco" : it.resposta === it.gabarito ? "Você acertou" : `Você marcou ${esc(it.resposta)}`;
   // Mesmo layout do simulado (questão + cartão-resposta ao lado): a questão fica com a mesma largura e o
@@ -1525,9 +1554,11 @@ function mostrarQuemSou() {
 }
 
 function telaEntrar() {
+  geracao++; // respostas da tela que estava carregando não desenham por cima da entrada
   limparTela?.();
   limparTela = null;
   Rascunho.esquecer();
+  revisaoGuardada = null; // outra pessoa pode entrar nesta aba
   mostrarQuemSou();
   let primeira = false;
   conteudo.innerHTML = `

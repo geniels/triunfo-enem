@@ -209,6 +209,15 @@ class TestProtecaoWeb(unittest.TestCase):
         self.assertEqual(self.pedir("PUT", "/api/preferencias", None, **grande)[0], 413)
         self.assertEqual(self.pedir("PUT", "/api/preferencias", None, **{"Transfer-Encoding": "chunked"})[0], 411)
 
+    def test_imagens_guardadas_no_navegador_e_gzip(self):  # Parte 3
+        teste = db.IMAGENS_DIR / "_teste_cache.png"
+        teste.write_bytes(bytes(40))
+        self.addCleanup(teste.unlink)
+        self.assertIn("immutable", self.pedir("GET", "/imagens/_teste_cache.png")[1]["cache-control"])
+        self.assertEqual(self.pedir("GET", "/static/app.js")[1]["cache-control"], "no-cache")
+        gz = self.pedir("GET", "/static/app.js", **{"Accept-Encoding": "gzip"})[1]
+        self.assertEqual(gz.get("content-encoding"), "gzip")
+
     def test_cabecalhos_de_seguranca(self):
         cod, cab = self.pedir("GET", "/")
         self.assertEqual(cod, 200)

@@ -1,6 +1,7 @@
 """Guia da prova: Markdown que vem com o app e pode ser atualizado pela internet (ADR 0008)."""
 from __future__ import annotations
 
+import functools
 import re
 import urllib.request
 
@@ -37,7 +38,12 @@ def ler(texto: str) -> dict:
 
 
 def atual() -> dict:
-    """O guia mais novo entre o embutido no app e o sincronizado."""
+    """O guia mais novo entre o embutido no app e o sincronizado. Em memória até um dos arquivos mudar."""
+    return _atual(EMBUTIDO.stat().st_mtime, LOCAL.stat().st_mtime if LOCAL.exists() else None)
+
+
+@functools.lru_cache(maxsize=1)
+def _atual(_mtime_embutido: float, _mtime_local: float | None) -> dict:
     guias = [ler(EMBUTIDO.read_text(encoding="utf-8")) | {"origem": "embutido"}]
     if LOCAL.exists():
         try:

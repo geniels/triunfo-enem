@@ -178,6 +178,8 @@ COLUNAS_NOVAS = {
         "bloqueado_ate": "REAL",                              # time.time() até quando espera
         "criado_em": "TEXT",
     },
+    # Resultado do simulado (acertos, nota TRI), calculado uma vez na entrega: as provas oficiais não mudam.
+    "simulados": {"resultado": "TEXT"},
 }
 
 

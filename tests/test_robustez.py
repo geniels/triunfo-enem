@@ -76,7 +76,9 @@ class TestProxima(Base):
         self.assertEqual(sortear(modo="todas", excluir=list(range(9000)) + QS[:2])["id"], QS[2])  # antes ia na URL
         main.responder(self.con, 1, main.Resposta(questao_id=QS[0], alternativa="A"))  # gabarito B: erro
         self.assertNotIn(QS[0], {sortear(modo="novas")["id"] for _ in range(20)})
-        self.assertEqual(sortear(modo="erros"), {"id": QS[0], "restantes": 1})
+        r = sortear(modo="erros")
+        self.assertEqual((r["id"], r["restantes"], r["questao"]["id"]), (QS[0], 1, QS[0]))  # a questão vem junto
+        self.assertNotIn("gabarito", r["questao"])
         self.assertEqual(sortear(modo="todas", excluir=QS)["id"], None)
 
 
@@ -196,6 +198,54 @@ class TestBaixarInstalador(unittest.TestCase):
     def test_sha_vazio_vira_erro_tratado(self):  # antes: IndexError -> erro 500
         with self.assertRaises(ValueError):
             self.baixar(b"")
+
+
+class TestDesempenho(Base):
+    """Parte 3: o resultado do simulado é calculado uma vez; a revisão só olha questões com erro."""
+
+    def test_resultado_guardado_na_entrega_e_lista_sem_recalcular(self):
+        sid = main.criar_simulado(self.con, 1, main.NovoSimulado(ano=ANO, dia=2))["id"]
+        main.atualizar_simulado(self.con, 1, sid, main.AtualizaSimulado(respostas={QS[0]: "B"}))
+        main.entregar_simulado(self.con, 1, sid)
+        with mock.patch.object(main, "_resultado", mock.Mock(side_effect=AssertionError("recalculou"))):
+            self.assertEqual(main.listar_simulados(self.con, 1)[0]["acertos"], 1)
+            self.assertEqual(main.abrir_simulado(self.con, 1, sid)["resultado"]["areas"][0]["acertos"], 1)
+
+    def test_simulado_entregue_antes_da_versao_guarda_na_primeira_abertura(self):
+        sid = main.criar_simulado(self.con, 1, main.NovoSimulado(ano=ANO, dia=2))["id"]
+        with self.con:
+            self.con.execute("UPDATE simulados SET entregue = 1 WHERE id = ?", (sid,))  # sem resultado guardado
+        main.abrir_simulado(self.con, 1, sid)
+        self.assertIsNotNone(self.con.execute("SELECT resultado FROM simulados WHERE id = ?", (sid,)).fetchone()[0])
+
+    def test_revisao_so_com_questoes_que_tiveram_erro(self):
+        with self.con:
+            self.con.executemany("INSERT INTO respostas (aluno_id, questao_id, alternativa, correta, criado_em) "
+                                 "VALUES (1, ?, 'A', ?, '2020-01-01 10:00:00')", [(QS[0], 0), (QS[1], 1)])
+        self.assertEqual(main._revisoes(self.con, 1)["hoje"], [QS[0]])
+
+
+class TestImagens(unittest.TestCase):
+    def test_dimensoes_dos_formatos(self):
+        import struct
+        from app import imagens
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        pasta = Path(tmp.name)
+        nulo = bytes(1)
+        png = bytes([0x89]) + b"PNG" + bytes(12) + struct.pack(">II", 640, 480)
+        (pasta / "a.png").write_bytes(png + nulo * 8)
+        (pasta / "b.gif").write_bytes(b"GIF89a" + struct.pack("<HH", 30, 20) + nulo * 20)
+        (pasta / "c.bmp").write_bytes(b"BM" + nulo * 16 + struct.pack("<ii", 50, -40) + nulo * 10)
+        app0 = bytes([0xFF, 0xE0]) + struct.pack(">H", 4) + nulo * 2
+        sof = bytes([0xFF, 0xC0]) + struct.pack(">HBHH", 11, 8, 300, 200)
+        (pasta / "d.jpg").write_bytes(bytes([0xFF, 0xD8]) + app0 + sof + nulo * 8)
+        imagens.dimensoes.cache_clear()
+        self.addCleanup(imagens.dimensoes.cache_clear)
+        with mock.patch.object(imagens, "IMAGENS_DIR", pasta):
+            texto = "![](/imagens/a.png) ![](/imagens/b.gif) ![](/imagens/c.bmp) ![](/imagens/d.jpg) ![](/imagens/nao.png)"
+            self.assertEqual(imagens.da_questao(texto), {"/imagens/a.png": [640, 480], "/imagens/b.gif": [30, 20],
+                                                         "/imagens/c.bmp": [50, 40], "/imagens/d.jpg": [200, 300]})
 
 
 class TestPlanoLimites(unittest.TestCase):

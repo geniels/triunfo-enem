@@ -7,13 +7,17 @@
 
   // Imagens e links viram marcadores (\u0000n\u0000) antes das outras trocas e só voltam como HTML no fim:
   // nenhuma regra roda sobre HTML já montado (antes, imagem e link aninhados escapavam do atributo alt).
+  let dims = {}; // {"/imagens/x.png": [largura, altura]} da questão: reserva o espaço antes da imagem chegar
+  const tamanho = (url) => (dims[url] ? ` width="${dims[url][0]}" height="${dims[url][1]}"` : "");
+
   function inline(s) {
     const guardados = [];
     const guardar = (html) => `\u0000${guardados.push(html) - 1}\u0000`;
     s = s.replace(/!\[([^\[\]]*)\]\(([^()\s]+)\)/g, (m, alt, url) => {
       // Só imagens locais: o TRIunfo funciona offline e não busca nada fora (ADR 0002).
       if (!url.startsWith("/imagens/")) return guardar('<span class="img-faltando">[imagem indisponível na fonte]</span>');
-      return guardar(`<img src="${escapar(url.replace(/&amp;/g, "&"))}" alt="${alt || "Imagem da questão"}" loading="lazy">`);
+      const u = url.replace(/&amp;/g, "&");
+      return guardar(`<img src="${escapar(u)}"${tamanho(u)} alt="${alt || "Imagem da questão"}" loading="lazy">`);
     });
     // Links só para https:// ou âncoras internas (#rota): nada de javascript: vindo de conteúdo baixado.
     s = s.replace(/\[([^\[\]]+)\]\((https:\/\/[^()\s]+|#[\w-]+)\)/g, (m, t, url) =>
@@ -38,8 +42,9 @@
     );
   }
 
-  window.markdown = function (texto) {
+  window.markdown = function (texto, dimensoes) {
     if (!texto) return "";
+    dims = dimensoes || {};
     const blocos = escapar(texto.replace(/\r\n/g, "\n")).split(/\n{2,}/);
     return blocos
       .map((b) => {

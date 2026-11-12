@@ -24,7 +24,7 @@ O rascunho fica salvo no `aluno.db` e volta na prática, no caderno de erros e n
 Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 **Lembrete de versão nova** na tela inicial, com consulta diária desligável (ADR 0024).
 **Tablet do próprio estudante** com o mesmo progresso do PC (ADR 0025). Versão **0.5.2** (lembrete + tablet).
-**Próximo passo:** correções da revisão geral (seção abaixo), Partes 3 e 4 (1 e 2 prontas); depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
+**Próximo passo:** correções da revisão geral (seção abaixo), Parte 4 (1 a 3 prontas); depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -88,15 +88,17 @@ Revisão com os agentes do agent-skills (code-reviewer, security-auditor, test-e
 - [x] (achado no CI) Os testes da API criam um `data/` vazio: o workflow extrai o pacote de dados com `-Force`.
 - [ ] 14 sem teste automático (simular porta tomada por outro programa é instável no Windows); conferido na leitura.
 
-**Parte 3: desempenho (PC fraco com sala cheia, tablet)**
-- [ ] 16. Rascunho: desenhar só o trecho novo no `pointermove`; cor calculada uma vez; borracha redesenha uma vez por evento.
-- [ ] 17. Imagens: `Cache-Control: immutable` em `/imagens/` (nome = hash do conteúdo); `width`/`height` ou `aspect-ratio`;
-      BMP convertido para PNG na importação.
-- [ ] 18. Simulado: resultado e nota TRI calculados uma vez (guardados na entrega); lista sem recalcular; revisão sem
+**Parte 3: desempenho (PC fraco com sala cheia, tablet)** ✅ (versão 0.5.5)
+- [x] 16. Rascunho: desenhar só o trecho novo no `pointermove`; cor calculada uma vez; borracha redesenha uma vez por evento.
+- [x] 17. Imagens: `Cache-Control: immutable` em `/imagens/` (nome = hash do conteúdo); `width`/`height` ou `aspect-ratio`;
+      ~~BMP convertido para PNG~~: descartado; são 10 arquivos de 64 KB (0,7% das imagens), e converter mudaria nomes no banco e no pacote de dados.
+- [x] 18. Simulado: resultado e nota TRI calculados uma vez (guardados na entrega); lista sem recalcular; revisão sem
       buscar o simulado a cada questão.
-- [ ] 19. `_revisoes` só com as questões que já tiveram erro; grade do simulado sem recriar os 90 botões; marcar sem
+- [x] 19. `_revisoes` só com as questões que já tiveram erro; grade do simulado sem recriar os 90 botões; marcar sem
       redesenhar a questão; prática com menos idas e voltas (questão junto com `/api/proxima`); guia em cache;
       `/api/turma/eu` sem bloquear a navegação; GZip.
+- [x] (achado ao testar) `getCoalescedEvents()` pode vir vazio: o rascunho perdia o movimento e desenhava só o ponto inicial.
+- Mantido: `/api/estatisticas` e `/api/plano` repetem uma consulta por área; juntar acoplaria duas telas por um ganho pequeno.
 
 **Parte 4: menores**
 - [ ] Cookie da turma com validade e "Sair" que invalida a sessão no servidor.

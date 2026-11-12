@@ -129,34 +129,50 @@ const Rascunho = (() => {
       desenhar();
     }
 
-    function tracar(t) {
+    let cores = {};
+
+    // desde: desenha só a partir desse ponto (o trecho novo de um traço em andamento).
+    function tracar(t, desde = 0) {
       const s = ESTILO[t.tipo];
+      const pontos = t.pontos.slice(Math.max(0, desde - 1));
       ctx.globalAlpha = s.alfa;
-      ctx.strokeStyle = cor(t.tipo);
+      ctx.strokeStyle = cores[t.tipo];
       ctx.lineWidth = s.largura * (t.tipo === "caneta" ? (t.pressao || 1) : 1);
       ctx.lineCap = ctx.lineJoin = "round";
       ctx.beginPath();
-      t.pontos.forEach(([x, y], i) => (i ? ctx.lineTo(x * largura, y * largura) : ctx.moveTo(x * largura, y * largura)));
-      if (t.pontos.length === 1) ctx.lineTo(t.pontos[0][0] * largura + 0.1, t.pontos[0][1] * largura);
+      pontos.forEach(([x, y], i) => (i ? ctx.lineTo(x * largura, y * largura) : ctx.moveTo(x * largura, y * largura)));
+      if (pontos.length === 1) ctx.lineTo(pontos[0][0] * largura + 0.1, pontos[0][1] * largura);
       ctx.stroke();
       ctx.globalAlpha = 1;
     }
 
     function desenhar() {
+      cores = { caneta: cor("caneta"), marca: cor("marca") }; // getComputedStyle uma vez, não por traço
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       // marca-texto por baixo da caneta, como no papel
       dados.tracos.filter((t) => t.tipo === "marca").forEach(tracar);
       dados.tracos.filter((t) => t.tipo === "caneta").forEach(tracar);
     }
 
-    const ponto = (e) => {
-      const r = canvas.getBoundingClientRect();
-      return [(e.clientX - r.left) / largura, (e.clientY - r.top) / largura];
-    };
+    const ponto = (e, r = canvas.getBoundingClientRect()) => [(e.clientX - r.left) / largura, (e.clientY - r.top) / largura];
 
-    function apagarEm([x, y]) {
+    // Desenho do traço em andamento: no máximo uma vez por quadro de tela (a caneta manda 120 a 240 eventos por
+    // segundo). A caneta desenha só o trecho novo; o marca-texto, translúcido, é redesenhado (emendas
+    // translúcidas sobrepostas ficariam manchadas).
+    let quadro = null, desenhadoAte = 0;
+    function agendar() {
+      quadro ??= requestAnimationFrame(() => {
+        quadro = null;
+        if (!traco || traco.borracha) return;
+        if (traco.tipo === "caneta" && desenhadoAte > 0) tracar(traco, desenhadoAte);
+        else desenhar();
+        desenhadoAte = traco.pontos.length;
+      });
+    }
+
+    function apagarEm(...pontos) {
       const raio = 12 / largura;
-      const tocados = dados.tracos.filter((t) => t.pontos.some(([a, b]) => Math.hypot(a - x, b - y) < raio));
+      const tocados = dados.tracos.filter((t) => t.pontos.some(([a, b]) => pontos.some(([x, y]) => Math.hypot(a - x, b - y) < raio)));
       if (!tocados.length) return;
       dados.tracos = dados.tracos.filter((t) => !tocados.includes(t));
       dados.historico.push({ apagou: tocados });
@@ -178,7 +194,8 @@ const Rascunho = (() => {
       traco = { tipo: ferramenta, pontos: [ponto(e)], pressao: e.pointerType === "pen" ? 0.6 + e.pressure : 1 };
       dados.tracos.push(traco);
       dados.historico.push({ fez: traco });
-      desenhar();
+      desenhadoAte = 0;
+      agendar();
     });
     canvas.addEventListener("pointermove", (e) => {
       if (rolando !== null) {
@@ -187,13 +204,20 @@ const Rascunho = (() => {
         return;
       }
       if (!traco) return;
-      const eventos = e.getCoalescedEvents ? e.getCoalescedEvents() : [e];
-      if (traco.borracha) return eventos.forEach((x) => apagarEm(ponto(x)));
-      eventos.forEach((x) => traco.pontos.push(ponto(x)));
-      desenhar();
+      const juntos = e.getCoalescedEvents?.() || [];
+      const eventos = juntos.length ? juntos : [e]; // a lista pode vir vazia (eventos sintéticos, alguns navegadores)
+      const r = canvas.getBoundingClientRect(); // uma leitura de layout por evento, não por ponto
+      if (traco.borracha) return apagarEm(...eventos.map((x) => ponto(x, r))); // um redesenho por evento
+      eventos.forEach((x) => traco.pontos.push(ponto(x, r)));
+      agendar();
     });
     const soltar = () => {
-      if (traco && !traco.borracha) mudou();
+      if (quadro) cancelAnimationFrame(quadro);
+      quadro = null;
+      if (traco && !traco.borracha) {
+        desenhar(); // acabamento: o traço inteiro, na ordem certa entre marca-texto e caneta
+        mudou();
+      }
       traco = null;
       rolando = null;
     };

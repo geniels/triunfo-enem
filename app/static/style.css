@@ -179,7 +179,7 @@ th, td { border: 1px solid var(--linha); padding: .35rem .6rem; text-align: left
 }
 .alternativas button:hover:not(:disabled) { border-color: var(--primaria); }
 .alternativas button p { margin: 0; }
-.alternativas img { display: block; max-height: 220px; background: #fff; border-radius: 4px; }
+.alternativas img { display: block; width: auto; max-height: 220px; background: #fff; border-radius: 4px; }
 .letra {
   flex: none; width: 1.9rem; height: 1.9rem; border-radius: 50%; display: grid; place-items: center;
   font-weight: 700; border: 2px solid var(--linha);
