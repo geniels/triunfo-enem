@@ -31,6 +31,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0021](0021-build-no-github-actions.md) | Instalador gerado no GitHub Actions, pronto para assinatura | Aceita |
 | [0022](0022-modo-turma.md) | Modo turma: estudar em grupo na rede local, com nome e PIN | Aceita |
 | [0023](0023-rascunho-com-caneta.md) | Rascunho com caneta sobre a questão | Aceita |
+| [0024](0024-lembrete-de-versao-nova.md) | Lembrete de versão nova na tela inicial | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

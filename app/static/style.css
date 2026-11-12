@@ -368,3 +368,10 @@ body:has(.rascunho-barra:not([hidden])) .conteudo { padding-bottom: 5.5rem; }
 .rascunho-aviso { margin: 0; max-width: 18rem; padding: .5rem .75rem; border-radius: 10px; background: var(--nao-fundo);
   color: var(--texto); border: 1px solid var(--nao); font-size: .9rem; }
 .q.atual { outline: 3px solid var(--texto); outline-offset: 2px; }
+
+/* Lembrete de versão nova (ADR 0024) */
+.lembrete { border-left: 5px solid var(--ouro); margin-bottom: 1rem; }
+.lembrete h2 { margin-top: 0; }
+.opcao { display: flex; gap: .6rem; align-items: flex-start; margin-top: 1rem; }
+.opcao input { width: 1.2rem; height: 1.2rem; margin-top: .2rem; accent-color: var(--primaria); flex: none; }
+.opcao small { display: block; color: var(--suave); }

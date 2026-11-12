@@ -70,8 +70,9 @@ virão com *free code signing provided by [SignPath.io](https://signpath.io), ce
 **Configurações**
 - Tema claro, escuro ou automático e quatro cores de destaque.
 - Botão **Verificar atualizações**: atualiza o guia quando sai um edital novo e, se houver versão nova do programa,
-  oferece **Atualizar agora**: baixa, confere a integridade e instala, mantendo o progresso. Só usa a internet
-  quando o aluno toca nele.
+  oferece **Atualizar agora**: baixa, confere a integridade e instala, mantendo o progresso.
+- **Lembrete de versão nova** na tela inicial: o TRIunfo confere no máximo uma vez por dia, se houver internet, e
+  nunca instala nada sem o clique. Dá para desligar em Configurações.
 
 **Acessibilidade**: funciona no celular, pode ser usado só pelo teclado, tem foco visível e não comunica nada apenas
 por cor.
@@ -79,7 +80,8 @@ por cor.
 ## Privacidade
 
 Tudo fica no computador do aluno: respostas, redações e plano de estudos não são enviados a lugar nenhum. A internet
-só é usada quando o aluno pede (verificar atualizações) ou na primeira preparação para desenvolvedores. Nenhum dado
+só é usada para conferir se há versão nova (no máximo uma vez por dia, desligável), quando o aluno pede
+(verificar atualizações) ou na primeira preparação para desenvolvedores. Nenhum dado
 de estudante vai para serviços que o usem para treinar inteligência artificial (LGPD). Detalhes na
 [política de privacidade](PRIVACIDADE.md).
 

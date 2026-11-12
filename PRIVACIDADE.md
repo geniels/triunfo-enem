@@ -10,9 +10,11 @@ Nada disso é enviado para o autor, para o GitHub ou para qualquer outro lugar. 
 propaganda, rastreamento nem estatísticas de uso.
 
 ## Quando o programa usa a internet
-Só quando você clica em **Verificar atualizações**, em Configurações. Nesse momento, o TRIunfo:
-- consulta no GitHub se há versão nova do programa e, se você pedir, baixa o instalador;
-- baixa a versão mais recente do Guia da prova.
+- **Uma vez por dia, no máximo**, ao abrir a tela inicial, o TRIunfo consulta no GitHub se existe versão nova, para
+  mostrar um lembrete. Nada é baixado nem instalado sem você clicar. Para desligar: Configurações → desmarque
+  "Avisar na tela inicial quando houver versão nova".
+- Quando você clica em **Verificar atualizações**, em Configurações: o TRIunfo consulta se há versão nova (e, se
+  você pedir, baixa o instalador) e baixa a versão mais recente do Guia da prova.
 
 Essas consultas não enviam nenhum dado seu. Como em qualquer acesso a um site, o GitHub recebe o endereço IP do seu
 computador; veja a [política de privacidade do GitHub](https://docs.github.com/pt/site-policy/privacy-policies/github-general-privacy-statement).
@@ -38,8 +40,10 @@ Dúvidas: abra uma *issue* em <https://github.com/geniels/triunfo-enem/issues>.
 - **Stored data:** answers, essays, mock exams and study plans are stored only on the user's computer, in the
   program's `data` folder. Nothing is sent to the author or any third party. There are no accounts, ads, tracking
   or usage analytics.
-- **Internet use:** only when the user clicks **Check for updates**. The program then queries GitHub for a newer
-  release (and downloads the installer if the user asks) and downloads the latest exam guide. No personal data is
+- **Internet use:** at most once a day, when the home screen opens, the program asks GitHub whether a newer
+  release exists, to show a reminder (this can be turned off in Settings; nothing is downloaded or installed
+  without a click). When the user clicks **Check for updates**, it also downloads the latest exam guide and, if
+  asked, the installer. No personal data is
   sent; as with any web request, GitHub sees the computer's IP address.
 - **Group mode (in development):** when a group studies together over a local network, participants' data (name,
   PIN and progress) stays only on the organizer's computer. PINs are stored as hashes.

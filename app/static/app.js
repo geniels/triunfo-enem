@@ -195,6 +195,7 @@ async function telaInicio() {
       </ul>
     </section>`;
   $("#revisar")?.addEventListener("click", irParaRevisao);
+  mostrarLembreteVersao(); // depois de desenhar: não atrasa a tela inicial
 }
 
 function irParaRevisao() {
@@ -1262,6 +1263,8 @@ async function telaConfig() {
       <p class="sub">O TRIunfo funciona sem internet. De vez em quando, conectado, toque abaixo: o guia da prova é
         atualizado na hora (alguns KB) e você fica sabendo se existe uma versão nova do programa.</p>
       <div class="acoes"><button class="botao" id="sincronizar">Verificar atualizações</button></div>
+      <label class="opcao"><input type="checkbox" id="lembrete-versao"> Avisar na tela inicial quando houver versão
+        nova <small>(consulta o GitHub no máximo uma vez por dia, só se houver internet; nada é instalado sem você clicar)</small></label>
       <div id="resultado" aria-live="polite"></div>
     </section>`;
 
@@ -1286,6 +1289,12 @@ async function telaConfig() {
     return;
   }
   desenharTurma(await api("/api/turma"));
+  const lembrete = $("#lembrete-versao");
+  lembrete.checked = (await api("/api/preferencias")).lembrete_versao;
+  lembrete.onchange = () =>
+    api("/api/preferencias", {
+      method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ lembrete_versao: lembrete.checked }),
+    });
 
   $("#sincronizar").onclick = async (e) => {
     const botao = e.currentTarget;
@@ -1312,17 +1321,56 @@ async function telaConfig() {
     else if (vr.ok) linhas.push(`<div class="retorno ok">Programa: você já tem a versão mais nova (${esc(vr.dados.atual)}).</div>`);
     saida.innerHTML = linhas.join("");
     const atualizar = $("#atualizar");
-    if (atualizar)
-      atualizar.onclick = async () => {
-        atualizar.disabled = true;
-        atualizar.textContent = "Baixando… (pode levar alguns minutos)";
-        const r = await fetch("/api/atualizar", { method: "POST" });
-        const d = await r.json().catch(() => ({}));
-        saida.innerHTML = r.ok
-          ? `<div class="retorno ok"><b>Instalando a versão nova.</b> O TRIunfo vai fechar e abrir de novo sozinho em
-              instantes. Pode fechar esta aba.</div>`
-          : `<div class="retorno nao">${esc(d.detail || "Não foi possível atualizar agora.")}</div>`;
-      };
+    if (atualizar) atualizar.onclick = () => instalarAtualizacao(atualizar, saida);
+  };
+}
+
+/* ---------------------------- Atualização e lembrete (ADR 0019 e 0024) ---------------------------- */
+
+async function instalarAtualizacao(botao, saida) {
+  botao.disabled = true;
+  botao.textContent = "Baixando… (pode levar alguns minutos)";
+  const r = await fetch("/api/atualizar", { method: "POST" }).catch(() => null);
+  const d = r ? await r.json().catch(() => ({})) : {};
+  saida.innerHTML = r?.ok
+    ? `<div class="retorno ok"><b>Instalando a versão nova.</b> O TRIunfo vai fechar e abrir de novo sozinho em
+        instantes. Pode fechar esta aba.</div>`
+    : `<div class="retorno nao">${esc(d.detail || "Não foi possível atualizar agora. Verifique a internet e tente de novo.")}</div>`;
+  if (!r?.ok) {
+    botao.disabled = false;
+    botao.textContent = "Tentar de novo";
+  }
+}
+
+const ADIAR_DIAS = 3;
+function lembreteAdiado(versao) {
+  try {
+    const a = JSON.parse(localStorage.getItem("triunfo-lembrete")) || {};
+    return a.versao === versao && Date.now() < a.ate;
+  } catch { return false; }
+}
+
+async function mostrarLembreteVersao() {
+  if (eu.modo === "turma") return; // na turma, quem atualiza é o organizador
+  const v = await fetch("/api/versao/lembrete").then((r) => r.json()).catch(() => null);
+  const inicio = $(".boas-vindas");
+  if (!v?.nova || !inicio || lembreteAdiado(v.nova) || $("#lembrete")) return; // já saiu do Início ou já mostrou
+  inicio.insertAdjacentHTML("beforebegin", `
+    <section class="cartao lembrete" id="lembrete" aria-labelledby="lembrete-titulo">
+      <h2 id="lembrete-titulo">Versão nova do TRIunfo: ${esc(v.nova)}</h2>
+      <p>Traz melhorias e correções. <a href="${esc(v.url)}" target="_blank" rel="noopener">Veja o que mudou</a>.
+        Seu progresso é mantido.</p>
+      <div class="acoes">
+        ${v.pode_instalar ? `<button class="botao" id="l-atualizar">Atualizar agora (${v.tamanho_mb} MB)</button>` : ""}
+        <button class="botao link" id="l-depois">Agora não</button>
+      </div>
+      <div id="l-saida" aria-live="polite"></div>
+    </section>`);
+  $("#l-atualizar")?.addEventListener("click", (e) => instalarAtualizacao(e.currentTarget, $("#l-saida")));
+  $("#l-depois").onclick = () => {
+    try { localStorage.setItem("triunfo-lembrete", JSON.stringify({ versao: v.nova, ate: Date.now() + ADIAR_DIAS * 864e5 })); } catch {}
+    $("#lembrete").remove();
+    $(".hero")?.closest("section")?.querySelector("a, button")?.focus();
   };
 }
 

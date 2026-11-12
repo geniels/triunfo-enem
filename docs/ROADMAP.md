@@ -22,6 +22,7 @@ enviada em 2026-11-10 (aguardando resposta; depois, seguir `docs/ASSINATURA.md`)
 O rascunho fica salvo no `aluno.db` e volta na prática, no caderno de erros e na nova **revisão do simulado entregue**
 (resposta, gabarito e rascunho de cada questão).
 Rascunho e revisão do simulado publicados na **versão 0.5.1**.
+**Lembrete de versão nova** na tela inicial, com consulta diária desligável (ADR 0024).
 **Próximo passo:** testar o rascunho num iPad/caneta de verdade; painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases

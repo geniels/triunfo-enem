@@ -1,6 +1,7 @@
 # 0012. Atualizações: conteúdo pelo botão, programa com aviso e instalação verificada
 
-- **Status:** Aceita
+- **Status:** Aceita. Alterada pela ADR 0024: lembrete de versão nova na tela inicial, com consulta automática
+  diária (desligável)
 - **Data:** 2026-11-08
 
 ## Contexto

@@ -8,6 +8,7 @@ from __future__ import annotations
 import json
 import secrets
 import sqlite3
+import time
 from collections import defaultdict
 from datetime import date, timedelta
 from typing import Annotated, Literal
@@ -118,6 +119,54 @@ def verificar_versao(verificar: bool = False):
         raise HTTPException(503, "Não foi possível verificar a versão agora.")
     except (ValueError, KeyError):
         raise HTTPException(502, "Resposta inesperada ao verificar a versão.")
+
+
+def _config(con: sqlite3.Connection, chave: str, padrao: str) -> str:
+    r = con.execute("SELECT valor FROM config WHERE chave = ?", (chave,)).fetchone()
+    return r[0] if r else padrao
+
+
+def _gravar_config(con: sqlite3.Connection, chave: str, valor: str) -> None:
+    with con:
+        con.execute("INSERT INTO config (chave, valor) VALUES (?, ?) ON CONFLICT (chave) DO UPDATE SET valor = excluded.valor",
+                    (chave, valor))
+
+
+UM_DIA = 86400
+
+
+@app.get("/api/versao/lembrete")
+def lembrete_versao(request: Request, con: Con):
+    """Lembrete de versão nova (ADR 0024): consulta o GitHub no máximo 1 vez por dia, em segundo plano.
+    Sem internet, fica quieto e tenta de novo em 6 horas. Nada é baixado nem instalado sem o clique."""
+    if pela_turma(request) or _config(con, "lembrete_versao", "1") != "1":
+        return {"nova": None}  # na turma, quem atualiza é o organizador
+    agora = time.time()
+    if agora - float(_config(con, "versao_consultada_em", "0")) > UM_DIA:
+        try:
+            _gravar_config(con, "versao_lembrete", json.dumps(versao.verificar()))
+            _gravar_config(con, "versao_consultada_em", str(agora))
+        except (OSError, ValueError, KeyError):
+            _gravar_config(con, "versao_consultada_em", str(agora - UM_DIA + 6 * 3600))
+    info = json.loads(_config(con, "versao_lembrete", "{}"))
+    if not info.get("nova") or guia.versao(info["nova"]) <= guia.versao(versao.VERSAO):
+        return {"nova": None}  # já atualizou
+    return info
+
+
+class Preferencias(BaseModel):
+    lembrete_versao: bool
+
+
+@app.get("/api/preferencias", dependencies=[Organizador])
+def ler_preferencias(con: Con):
+    return {"lembrete_versao": _config(con, "lembrete_versao", "1") == "1"}
+
+
+@app.put("/api/preferencias", dependencies=[Organizador])
+def gravar_preferencias(p: Preferencias, con: Con):
+    _gravar_config(con, "lembrete_versao", "1" if p.lembrete_versao else "0")
+    return ler_preferencias(con)
 
 
 def filtro_sql(area: str | None, ano: int | None, idioma: str) -> tuple[str, list]:
