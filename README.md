@@ -10,7 +10,7 @@
 
 ---
 
-## 💡 Por que criamos o TRIunfo?
+## 💡 Por que criei o TRIunfo?
 
 Se você estuda sozinho para o ENEM, provavelmente já passou por isso: questões espalhadas em dezenas de sites, plataformas que cobram mensalidade para liberar o gabarito, propagandas que tiram sua concentração ou a internet caindo bem na hora de estudar.
 
