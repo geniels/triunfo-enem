@@ -287,11 +287,8 @@ async function telaPraticar() {
 
 async function carregarProxima() {
   const { area, ano, idioma, modo } = sessao.filtros;
-  const qs = new URLSearchParams({ idioma, modo });
-  if (area) qs.set("area", area);
-  if (ano) qs.set("ano", ano);
-  sessao.vistas.forEach((id) => qs.append("excluir", id));
-  const r = await api("/api/proxima?" + qs);
+  // As vistas vão no corpo: na URL, sessões longas passavam do limite de tamanho.
+  const r = await post("/api/proxima", { area: area || null, ano: ano ? +ano : null, idioma, modo, excluir: sessao.vistas });
   if (!r.id) return false;
   sessao.restantes = r.restantes;
   sessao.atual = await api("/api/questao/" + r.id);
@@ -341,7 +338,10 @@ function corpoQuestao(q) {
             </button></li>`
           )
           .join("")}
-      </ol>`;
+      </ol>
+      ${q.alternativas.length < 5 // 7 questões vêm assim do enem.dev (sem a E); o gabarito está entre as presentes
+        ? '<p class="sub">Esta questão veio da fonte com menos de 5 alternativas. A resposta certa está entre as mostradas.</p>'
+        : ""}`;
 }
 
 function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }) {
@@ -422,10 +422,10 @@ function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }
 
     const retorno = $("#retorno");
     if (r.correta) {
-      retorno.innerHTML = `<div class="retorno ok"><b>Acertou!</b> Resposta ${r.gabarito} em ${formatarTempo(tempo)}.</div>`;
+      retorno.innerHTML = `<div class="retorno ok"><b>Acertou!</b> Resposta ${esc(r.gabarito)} em ${formatarTempo(tempo)}.</div>`;
     } else {
       retorno.innerHTML = `<div class="retorno nao">
-        <b>Resposta certa: ${r.gabarito}.</b> Por que você errou? <small>(isso alimenta seu caderno de erros)</small>
+        <b>Resposta certa: ${esc(r.gabarito)}.</b> Por que você errou? <small>(isso alimenta seu caderno de erros)</small>
         <div class="chips motivos">${Object.entries(MOTIVOS).map(([k, n]) => `<button type="button" data-m="${k}">${n}</button>`).join("")}</div>
       </div>`;
       retorno.querySelector(".motivos").onclick = async (e) => {
@@ -496,7 +496,7 @@ async function telaErros() {
                 ${e.vezes_errada > 1 ? `<span class="repetido">errou ${e.vezes_errada}x</span>` : ""}
               </div>
               <p class="trecho">${esc(limparTrecho(e.trecho))}…</p>
-              <div class="erro-rodape">Marcou <b>${e.alternativa}</b>, certa <b>${e.gabarito}</b>
+              <div class="erro-rodape">Marcou <b>${esc(e.alternativa)}</b>, certa <b>${esc(e.gabarito)}</b>
                 ${e.motivo_erro ? ` · ${MOTIVOS[e.motivo_erro]}` : ""}</div>
             </a>
           </li>`
@@ -910,7 +910,6 @@ function fazerSimulado(s) {
     $("#s-anterior").onclick = () => mostrar(atual - 1);
     $("#s-proxima").onclick = () => mostrar(atual + 1);
     $("#s-marcar").onclick = alternarMarca;
-    if (q.alternativas.length < 5) $("#s-questao").insertAdjacentHTML("beforeend", '<p class="sub">Esta questão veio da fonte com menos de 5 alternativas.</p>');
     pronta = true;
     buscar(s.questoes[atual + 1] ?? qid).catch(() => {}); // adianta a próxima
   }

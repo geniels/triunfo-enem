@@ -192,56 +192,85 @@ def criar_tabelas(con: sqlite3.Connection) -> None:
     con.commit()
 
 
+def _inteiro(v) -> int | None:
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return None
+
+
 def migrar(pasta: Path) -> None:
     """Converte o formato antigo (um só data/enem.db, ids sequenciais) para questoes.db + aluno.db (ids fixos).
 
     Casos: instalação de desenvolvimento (só enem.db) e atualização pelo instalador (enem.db antigo com o
-    progresso + questoes.db novo). Antes de mexer, guarda uma cópia do enem.db."""
-    antigo = pasta / "enem.db"
-    if not antigo.exists() or (pasta / "aluno.db").exists():
+    progresso + questoes.db novo). Antes de mexer, guarda uma cópia do enem.db.
+
+    Pode ser interrompida em qualquer ponto (falta de luz, erro): o aluno.db é montado num arquivo temporário e só
+    ganha o nome final quando tudo deu certo; na próxima abertura, recomeça da cópia original."""
+    antigo, aluno_db, copia = pasta / "enem.db", pasta / "aluno.db", pasta / "enem-antes-da-migracao.db"
+    if aluno_db.exists():
+        # Parou entre os dois últimos passos: o progresso já foi para o aluno.db, falta o banco de questões.
+        if antigo.exists() and not (pasta / "questoes.db").exists():
+            antigo.rename(pasta / "questoes.db")
         return
-    copia = pasta / "enem-antes-da-migracao.db"
-    shutil.copy2(antigo, copia)
+    if not antigo.exists():
+        return
+    if copia.exists():
+        shutil.copy2(copia, antigo)  # tentativa anterior interrompida: recomeça do original
+    else:
+        shutil.copy2(antigo, copia)
+    temporario = pasta / "aluno.db.migrando"
+    temporario.unlink(missing_ok=True)
+
     velho = sqlite3.connect(antigo)
-    novo_id = {
-        qid: id_questao(ano, indice, idioma)
-        for qid, ano, indice, idioma in velho.execute("SELECT id, ano, indice, idioma FROM questoes")
-    }
+    aluno = sqlite3.connect(temporario)
+    try:
+        novo_id = {
+            qid: id_questao(ano, indice, idioma)
+            for qid, ano, indice, idioma in velho.execute("SELECT id, ano, indice, idioma FROM questoes")
+        }
+        converter = lambda v: novo_id.get(_inteiro(v), _inteiro(v))  # noqa: E731
 
-    # 1. Progresso do aluno -> aluno.db, com os ids das questões convertidos.
-    aluno = sqlite3.connect(pasta / "aluno.db")
-    aluno.executescript(ESQUEMA_ALUNO)
-    existentes = {r[0] for r in velho.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
-    for tabela in (t for t in TABELAS_ALUNO if t in existentes):
-        colunas = [c[1] for c in velho.execute(f"PRAGMA table_info({tabela})")]
-        for linha in velho.execute(f"SELECT {', '.join(colunas)} FROM {tabela}"):
-            r = dict(zip(colunas, linha))
-            if tabela == "respostas":
-                r["questao_id"] = novo_id.get(r["questao_id"], r["questao_id"])
-            if tabela == "simulados":
-                r["respostas"] = json.dumps({str(novo_id.get(int(k), int(k))): v for k, v in json.loads(r["respostas"]).items()})
-                r["marcadas"] = json.dumps([novo_id.get(q, q) for q in json.loads(r["marcadas"])])
-            aluno.execute(f"INSERT OR REPLACE INTO {tabela} ({', '.join(r)}) VALUES ({', '.join('?' * len(r))})", list(r.values()))
-    aluno.commit()
-    aluno.close()
+        # 1. Progresso do aluno -> aluno.db, com os ids das questões convertidos.
+        aluno.executescript(ESQUEMA_ALUNO)
+        existentes = {r[0] for r in velho.execute("SELECT name FROM sqlite_master WHERE type = 'table'")}
+        for tabela in (t for t in TABELAS_ALUNO if t in existentes):
+            colunas = [c[1] for c in velho.execute(f"PRAGMA table_info({tabela})")]
+            for linha in velho.execute(f"SELECT {', '.join(colunas)} FROM {tabela}"):
+                r = dict(zip(colunas, linha))
+                if tabela == "respostas":
+                    r["questao_id"] = converter(r["questao_id"])
+                if tabela == "simulados":  # chaves inválidas (dado corrompido) são ignoradas, sem travar
+                    respostas = json.loads(r["respostas"] or "{}")
+                    r["respostas"] = json.dumps({str(converter(k)): v for k, v in respostas.items() if _inteiro(k) is not None})
+                    r["marcadas"] = json.dumps([converter(q) for q in json.loads(r["marcadas"] or "[]") if _inteiro(q) is not None])
+                aluno.execute(f"INSERT OR REPLACE INTO {tabela} ({', '.join(r)}) VALUES ({', '.join('?' * len(r))})",
+                              list(r.values()))
+        aluno.commit()
+        aluno.close()
 
-    # 2. O que sobra do enem.db vira o questoes.db (se o instalador ainda não trouxe um novo).
-    if (pasta / "questoes.db").exists():
+        # 2. O que sobra do enem.db vira o questoes.db (se o instalador ainda não trouxe um novo).
+        if not (pasta / "questoes.db").exists():
+            velho.execute("PRAGMA foreign_keys = OFF")
+            velho.execute("CREATE TEMP TABLE mapa (velho INTEGER PRIMARY KEY, novo INTEGER)")
+            velho.executemany("INSERT INTO mapa VALUES (?, ?)", novo_id.items())
+            for tabela, coluna in (("alternativas", "questao_id"), ("questoes_tri", "questao_id"), ("questoes", "id")):
+                if tabela in existentes:
+                    velho.execute(f"UPDATE {tabela} SET {coluna} = (SELECT novo FROM mapa WHERE velho = {coluna})")
+            for tabela in (t for t in TABELAS_ALUNO if t in existentes):
+                velho.execute(f"DROP TABLE {tabela}")
+            velho.commit()
+            velho.execute("PRAGMA journal_mode = DELETE")
+            velho.execute("VACUUM")
+    finally:
         velho.close()
+        aluno.close()
+
+    # 3. Por último: o aluno.db só passa a existir quando tudo deu certo.
+    temporario.rename(aluno_db)
+    if (pasta / "questoes.db").exists():
         antigo.unlink()
     else:
-        velho.execute("PRAGMA foreign_keys = OFF")
-        velho.execute("CREATE TEMP TABLE mapa (velho INTEGER PRIMARY KEY, novo INTEGER)")
-        velho.executemany("INSERT INTO mapa VALUES (?, ?)", novo_id.items())
-        for tabela, coluna in (("alternativas", "questao_id"), ("questoes_tri", "questao_id"), ("questoes", "id")):
-            if tabela in existentes:
-                velho.execute(f"UPDATE {tabela} SET {coluna} = (SELECT novo FROM mapa WHERE velho = {coluna})")
-        for tabela in (t for t in TABELAS_ALUNO if t in existentes):
-            velho.execute(f"DROP TABLE {tabela}")
-        velho.commit()
-        velho.execute("PRAGMA journal_mode = DELETE")
-        velho.execute("VACUUM")
-        velho.close()
         antigo.rename(pasta / "questoes.db")
     for resto in ("enem.db-wal", "enem.db-shm"):
         (pasta / resto).unlink(missing_ok=True)

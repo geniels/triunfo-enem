@@ -12,6 +12,9 @@ FASES = [  # (até quantos dias antes da prova, nome, simulados por semana, dica
 
 
 def fase(dias: int) -> dict:
+    if dias < 0:  # sem isto, "dias <= 7" mostrava "Semana da prova" depois da prova
+        return {"nome": "Depois da prova", "simulados_por_semana": 0,
+                "dica": "A prova deste ano já passou. Toque em \"alterar\" e informe a data do próximo ENEM."}
     for limite, nome, simulados, dica in FASES:
         if limite is None or dias <= limite:
             return {"nome": nome, "simulados_por_semana": simulados, "dica": dica}

@@ -11,7 +11,7 @@ from pathlib import Path
 
 from app import db, guia, plano, revisao, tri, versao
 from app.redacao import notas_validas
-from scripts.importar_enem_dev import area_oficial
+from scripts.importar_enem_dev import area_oficial, reescrever
 
 
 class TestGuia(unittest.TestCase):
@@ -153,6 +153,42 @@ class TestMigracao(unittest.TestCase):
             aluno.close()
 
 
+    def test_chave_invalida_no_simulado_nao_trava_a_migracao(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = Path(tmp)
+            self.montar_antigo(pasta)
+            velho = sqlite3.connect(pasta / "enem.db")
+            velho.execute("""UPDATE simulados SET respostas = '{"1": "B", "x": "C"}', marcadas = '[1, "y"]'""")
+            velho.commit()
+            velho.close()
+            db.migrar(pasta)
+            aluno = sqlite3.connect(pasta / "aluno.db")
+            resp, marc = aluno.execute("SELECT respostas, marcadas FROM simulados").fetchone()
+            self.assertEqual((json.loads(resp), json.loads(marc)), ({"20221750": "B"}, [20221750]))
+            aluno.close()
+
+    def test_migracao_interrompida_recomeca_do_original(self):
+        """Antes, uma falha no meio deixava um aluno.db parcial; na volta, a migração não rodava mais e o aluno ficava
+        sem questões e sem progresso."""
+        with tempfile.TemporaryDirectory() as tmp:
+            pasta = Path(tmp)
+            self.montar_antigo(pasta)
+            original = db.id_questao
+            db.id_questao = lambda *a: 1 / 0  # falha no meio da conversão
+            try:
+                with self.assertRaises(ZeroDivisionError):
+                    db.migrar(pasta)
+            finally:
+                db.id_questao = original
+            self.assertFalse((pasta / "aluno.db").exists())  # nada pela metade
+            db.migrar(pasta)  # próxima abertura do programa
+            aluno = sqlite3.connect(pasta / "aluno.db")
+            self.assertEqual(aluno.execute("SELECT questao_id FROM respostas").fetchone()[0], 20221750)
+            aluno.close()
+            banco = sqlite3.connect(pasta / "questoes.db")
+            self.assertEqual(banco.execute("SELECT COUNT(*) FROM questoes").fetchone()[0], 2)
+            banco.close()
+
 class TestAtualizacao(unittest.TestCase):
     def test_so_aceita_instalador_do_repositorio_oficial_com_sha(self):
         base = "https://github.com/geniels/triunfo-enem/releases/download/v9.9.9/"
@@ -174,6 +210,14 @@ class TestAreaOficial(unittest.TestCase):
         self.assertEqual(area_oficial(2017, 180, "x"), "matematica")
         self.assertEqual(area_oficial(2017, 181, "fonte"), "fonte")
 
+
+
+class TestImportador(unittest.TestCase):
+    def test_reescrever_troca_so_a_url_inteira_da_imagem(self):
+        mapa = {"https://x/a.png": "/imagens/a.png", "https://x/a.png2": "/imagens/b.png"}
+        texto = "![f](https://x/a.png) ![g](https://x/a.png2) fonte: https://x/a.png"
+        self.assertEqual(reescrever(texto, mapa), "![f](/imagens/a.png) ![g](/imagens/b.png) fonte: https://x/a.png")
+        self.assertEqual(reescrever("![](https://x/c.png)", mapa), "![](https://x/c.png)")  # sem cópia local: mantém
 
 if __name__ == "__main__":
     unittest.main()

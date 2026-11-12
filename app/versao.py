@@ -8,7 +8,7 @@ from pathlib import Path
 from app.db import DATA_DIR, RAIZ
 from app.guia import versao as comparavel
 
-VERSAO = "0.5.3"
+VERSAO = "0.5.4"
 URL = "https://api.github.com/repos/geniels/triunfo-enem/releases/latest"
 DOWNLOADS = "https://github.com/geniels/triunfo-enem/releases/download/"  # único lugar de onde se baixa
 LIMITE_BYTES = 300_000_000
@@ -72,7 +72,10 @@ def baixar_instalador() -> Path:
         raise ValueError("a versão publicada não tem instalador")
     exe, sha = pacote
     with _baixar(sha["browser_download_url"], 30) as r:
-        esperado = r.read(200).decode("ascii", "replace").split()[0].lower()
+        partes = r.read(200).decode("ascii", "replace").split()
+    if not partes:
+        raise ValueError("o arquivo de conferência (SHA-256) veio vazio")
+    esperado = partes[0].lower()
     pasta = DATA_DIR / "atualizacao"
     pasta.mkdir(exist_ok=True)
     destino = pasta / exe["name"]

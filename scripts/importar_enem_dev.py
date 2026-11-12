@@ -101,12 +101,21 @@ def area_oficial(ano: int, indice: int, area_fonte: str) -> str:
     return ordem[(indice - 1) // 45]
 
 
+LETRAS = "ABCDE"
+
+
 def reescrever(texto: str | None, mapa: dict[str, str]) -> str | None:
+    """Troca a URL de cada imagem ![...](url) pela cópia local. Pelo regex, e não por substring: uma URL que é
+    começo de outra (a.png e a.png2) ou que aparece fora de uma imagem não é trocada por engano."""
     if not texto:
         return texto
-    for url, local in mapa.items():
-        texto = texto.replace(url, local)
-    return texto
+
+    def trocar(m: re.Match) -> str:
+        url = m.group(1)
+        inicio, fim = m.start(1) - m.start(0), m.end(1) - m.start(0)
+        return m.group(0)[:inicio] + mapa.get(url, url) + m.group(0)[fim:]
+
+    return IMG_RE.sub(trocar, texto)
 
 
 def buscar_questoes(ano: int, idiomas: list[str]) -> list[dict]:
@@ -160,6 +169,10 @@ def main() -> None:
 
         with con:
             for q in questoes:
+                # A letra entra no HTML e decide o acerto: só A-E, como na prova.
+                if q.get("correctAlternative") not in tuple(LETRAS):
+                    print(f"  ! questão {q.get('index')} ignorada: gabarito inválido na fonte ({q.get('correctAlternative')!r})")
+                    continue
                 arquivos = [mapa.get(u, u) for u in (q.get("files") or []) if IMAGEM_QUEBRADA not in u]
                 cur = con.execute(
                     """
@@ -183,6 +196,9 @@ def main() -> None:
                 qid = cur.fetchone()[0]
                 con.execute("DELETE FROM alternativas WHERE questao_id = ?", (qid,))
                 for alt in q.get("alternatives") or []:
+                    if alt.get("letter") not in tuple(LETRAS):
+                        print(f"  ! questão {q.get('index')}: alternativa com letra inválida ignorada ({alt.get('letter')!r})")
+                        continue
                     arq = alt.get("file")
                     con.execute(
                         "INSERT INTO alternativas (questao_id, letra, texto, arquivo) VALUES (?, ?, ?, ?)",

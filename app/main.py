@@ -17,7 +17,7 @@ from collections import defaultdict
 from datetime import date, timedelta
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
+from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi import Path as FPath
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -82,6 +82,7 @@ CSP = (f"default-src 'self'; script-src 'self' 'sha256-{_hash_script}'; style-sr
        "img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; "
        "frame-ancestors 'none'")
 SEGUROS = {"GET", "HEAD", "OPTIONS"}
+LIMITE_PEDIDO = 1_000_000  # bytes: bem acima do maior pedido legítimo (rascunho de 400 KB)
 
 
 def host_permitido(host: str) -> bool:
@@ -112,6 +113,11 @@ async def protecao_e_cache(request: Request, call_next):
         return JSONResponse({"detail": "Endereço não permitido. Abra o TRIunfo pelo atalho ou pelo endereço mostrado nele."}, 400)
     if origem_estranha(request):
         return JSONResponse({"detail": "Pedido vindo de outro site foi recusado."}, 403)
+    # Tamanho antes de ler o corpo: um envio gigante pela rede derrubaria o PC de quem organiza a turma.
+    if "transfer-encoding" in request.headers:
+        return JSONResponse({"detail": "Envie o tamanho do pedido (Content-Length)."}, 411)
+    if int(request.headers.get("content-length") or 0) > LIMITE_PEDIDO:
+        return JSONResponse({"detail": "Pedido grande demais."}, 413)
     resposta = await call_next(request)
     # Força o navegador a conferir (304 é barato): sem isso, uma atualização do app não aparece para o aluno.
     resposta.headers["Cache-Control"] = "no-cache"
@@ -156,8 +162,9 @@ def atualizar_programa():
 
 
 @app.get("/api/versao")
-def verificar_versao(verificar: bool = False):
-    if not verificar:  # sem internet: só informa a versão instalada
+def verificar_versao(request: Request, verificar: bool = False):
+    # Pela rede, só a versão: consultar o GitHub em laço gastaria a cota (60/hora) do IP da escola.
+    if not verificar or pela_turma(request):  # sem internet: só informa a versão instalada
         return {"atual": versao.VERSAO}
     try:
         return versao.verificar()
@@ -262,19 +269,21 @@ def resumo_revisao(con: Con, aluno: Aluno):
     return {"hoje": len(r["hoje"]), "proximos_7_dias": r["proximos_7_dias"]}
 
 
-@app.get("/api/proxima")
-def proxima(
-    con: Con,
-    aluno: Aluno,
-    area: str | None = None,
-    ano: int | None = None,
-    idioma: Literal["ingles", "espanhol"] = "ingles",
-    modo: Literal["novas", "todas", "erros", "revisao"] = "novas",
-    excluir: list[int] = Query(default=[]),
-):
+class PedidoProxima(BaseModel):
+    area: str | None = None
+    ano: int | None = None
+    idioma: Literal["ingles", "espanhol"] = "ingles"
+    modo: Literal["novas", "todas", "erros", "revisao"] = "novas"
+    excluir: list[int] = Field(default=[], max_length=10_000)  # vistas na sessão; no corpo, sem limite de URL
+
+
+@app.post("/api/proxima")
+def proxima(p: PedidoProxima, con: Con, aluno: Aluno):
     """Sorteia a próxima questão conforme o modo de estudo."""
+    area, ano, idioma, modo, excluir = p.area, p.ano, p.idioma, p.modo, p.excluir
     if modo == "revisao":  # ordem fixa: as mais fáceis primeiro (ADR 0015)
-        fila = [q for q in _revisoes(con, aluno)["hoje"] if q not in set(excluir)]
+        vistas = set(excluir)
+        fila = [q for q in _revisoes(con, aluno)["hoje"] if q not in vistas]
         return {"id": fila[0] if fila else None, "restantes": len(fila)}
     where, params = filtro_sql(area, ano, idioma)
     if modo == "novas":
@@ -289,9 +298,9 @@ def proxima(
                 WHERE r2.aluno_id = r.aluno_id AND r2.questao_id = r.questao_id)
             AND r.correta = 0)"""
         params.append(aluno)
-    if excluir:
-        where += f" AND q.id NOT IN ({','.join('?' * len(excluir))})"
-        params.extend(excluir)
+    if excluir:  # um só parâmetro (JSON): sem o limite de variáveis do SQLite
+        where += " AND q.id NOT IN (SELECT value FROM json_each(?))"
+        params.append(json.dumps(excluir))
 
     row = con.execute(f"SELECT q.id FROM questoes q WHERE {where} ORDER BY RANDOM() LIMIT 1", params).fetchone()
     restantes = con.execute(f"SELECT COUNT(*) FROM questoes q WHERE {where}", params).fetchone()[0]
@@ -598,6 +607,8 @@ def _questoes_do_dia(con: sqlite3.Connection, ano: int, dia: int, idioma: str) -
 
 def _resultado(con: sqlite3.Connection, s: dict) -> dict:
     ids = s["questoes"]
+    if not ids:  # o banco de questões novo não tem mais esse ano/idioma (ADR 0018): resultado vazio, sem erro
+        return {"areas": [], "itens": []}
     rows = con.execute(
         f"SELECT id, indice, area, gabarito FROM questoes WHERE id IN ({','.join('?' * len(ids))}) ORDER BY indice",
         ids,
@@ -616,6 +627,8 @@ def _resultado(con: sqlite3.Connection, s: dict) -> dict:
 
 def _nota_tri(con: sqlite3.Connection, ano: int, areas: dict, itens: list[dict]) -> None:
     """Nota TRI por área, só quando a escala passou na conferência contra as notas oficiais (ADR 0014)."""
+    if not itens:
+        return
     params = {
         r["questao_id"]: r
         for r in con.execute(
@@ -806,10 +819,15 @@ def entrar_na_turma(a: Acesso, resposta: Response, con: Con):
 
 
 @app.post("/api/turma/cadastrar", dependencies=[Depends(_so_pela_turma)])
-def cadastrar_na_turma(a: Acesso, resposta: Response, con: Con):
+def cadastrar_na_turma(a: Acesso, request: Request, resposta: Response, con: Con):
     nome = " ".join(a.nome.split())
+    if not turma.pode_cadastrar(request.client.host if request.client else "?"):
+        raise HTTPException(429, "Muitos cadastros deste aparelho. Espere 1 minuto e tente de novo.")
     try:
         with con:
+            con.execute("BEGIN IMMEDIATE")  # conferir e gravar juntos: dois cadastros iguais ao mesmo tempo
+            if turma.achar(con, nome, com_pin=False):
+                raise sqlite3.IntegrityError
             aluno = con.execute(
                 "INSERT INTO alunos (nome, pin_hash, criado_em) VALUES (?, ?, datetime('now', 'localtime')) RETURNING id",
                 (nome, turma.hash_pin(a.pin)),
@@ -845,6 +863,9 @@ def definir_meu_acesso(a: Acesso, con: Con):
     nome = " ".join(a.nome.split())
     try:
         with con:
+            con.execute("BEGIN IMMEDIATE")
+            if turma.achar(con, nome, com_pin=False) not in (None, turma.ORGANIZADOR):
+                raise sqlite3.IntegrityError
             con.execute("UPDATE alunos SET nome = ?, pin_hash = ?, tentativas = 0, bloqueado_ate = NULL WHERE id = ?",
                         (nome, turma.hash_pin(a.pin), turma.ORGANIZADOR))
     except sqlite3.IntegrityError:

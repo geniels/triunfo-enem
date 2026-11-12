@@ -204,6 +204,11 @@ class TestProtecaoWeb(unittest.TestCase):
         self.assertEqual(self.pedir("PUT", "/api/preferencias", corpo, **{"Sec-Fetch-Site": "cross-site"})[0], 403)
         self.assertEqual(self.pedir("PUT", "/api/preferencias", corpo, Origin="http://127.0.0.1:8799")[0], 200)
 
+    def test_pedido_grande_demais_ou_sem_tamanho(self):  # Parte 2: um envio gigante derrubaria o PC da turma
+        grande = {"Content-Length": str(main.LIMITE_PEDIDO + 1)}
+        self.assertEqual(self.pedir("PUT", "/api/preferencias", None, **grande)[0], 413)
+        self.assertEqual(self.pedir("PUT", "/api/preferencias", None, **{"Transfer-Encoding": "chunked"})[0], 411)
+
     def test_cabecalhos_de_seguranca(self):
         cod, cab = self.pedir("GET", "/")
         self.assertEqual(cod, 200)

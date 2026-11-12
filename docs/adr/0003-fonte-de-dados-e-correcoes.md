@@ -29,4 +29,7 @@ Ao importar, encontramos problemas na fonte:
 - Resultado verificado: 2.749 questões, 45 por área por ano (a fonte não tem algumas), inglês e espanhol completos.
 - As provas de 2024 e 2025 não estão no enem.dev. Precisarão de um importador próprio a partir dos PDFs do INEP
   (Fase 5), com revisão humana.
+- 7 questões vêm da fonte sem a alternativa E (2011/180, 2013/64, 2016/47, 2021/105, 2021/175, 2022/144, 2022/166;
+  conferido de novo em 2026-11-11). O gabarito está entre as presentes, e a tela avisa. Recuperar a E exigiria os PDFs do INEP.
+- O importador ignora gabarito ou alternativa com letra fora de A–E (a letra entra no HTML e decide o acerto).
 - Se o enem.dev mudar o formato ou sair do ar, o banco já baixado continua funcionando, e o importador precisará de ajuste.

@@ -24,7 +24,7 @@ O rascunho fica salvo no `aluno.db` e volta na prática, no caderno de erros e n
 Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 **Lembrete de versão nova** na tela inicial, com consulta diária desligável (ADR 0024).
 **Tablet do próprio estudante** com o mesmo progresso do PC (ADR 0025). Versão **0.5.2** (lembrete + tablet).
-**Próximo passo:** correções da revisão geral (seção abaixo), Partes 2 a 4 (a 1 está pronta); depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
+**Próximo passo:** correções da revisão geral (seção abaixo), Partes 3 e 4 (1 e 2 prontas); depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -73,17 +73,20 @@ Revisão com os agentes do agent-skills (code-reviewer, security-auditor, test-e
 - [x] Testes desta parte: gabarito nunca sai antes da resposta; rotas de administração exigem o organizador;
       isolamento entre alunos; entrega do simulado; Host e Origin.
 
-**Parte 2: robustez**
-- [ ] 9. Migração interrompida no meio deixa o `aluno.db` parcial e o aluno sem questões nem progresso (confirmar com teste).
-- [ ] 10. Sem limite de tamanho de pedido (rascunho de centenas de MB, `/api/turma/entrar`); cadastro ilimitado pela rede.
-- [ ] 11. `_resultado`/`_nota_tri` com `IN ()` vazio: a lista de simulados quebra se o banco novo não tiver aquele ano.
-- [ ] 12. Nome com acento em maiúsculas (`COLLATE NOCASE` só vale para ASCII): login falha e permite duplicata.
-- [ ] 13. `.sha256` vazio dá `IndexError` (500); `/api/versao?verificar=1` liberado pela rede gasta a cota do GitHub.
-- [ ] 14. `turma.abrir()` diz que abriu mesmo se o servidor não subiu.
-- [ ] 15. Testes: migração, SHA-256, lembrete uma vez por dia, rascunho (vazio apaga, grande recusa), remover
+**Parte 2: robustez** ✅ (versão 0.5.4)
+- [x] 9. Migração interrompida no meio deixa o `aluno.db` parcial e o aluno sem questões nem progresso (confirmar com teste).
+- [x] 10. Sem limite de tamanho de pedido (rascunho de centenas de MB, `/api/turma/entrar`); cadastro ilimitado pela rede.
+- [x] 11. `_resultado`/`_nota_tri` com `IN ()` vazio: a lista de simulados quebra se o banco novo não tiver aquele ano.
+- [x] 12. Nome com acento em maiúsculas (`COLLATE NOCASE` só vale para ASCII): login falha e permite duplicata.
+- [x] 13. `.sha256` vazio dá `IndexError` (500); `/api/versao?verificar=1` liberado pela rede gasta a cota do GitHub.
+- [x] 14. `turma.abrir()` diz que abriu mesmo se o servidor não subiu.
+- [x] 15. Testes: migração, SHA-256, lembrete uma vez por dia, rascunho (vazio apaga, grande recusa), remover
       participante, nota TRI só com escala conferida, `plano` nos limites.
-- [ ] Pré-requisitos antigos: `esc()` em gabarito/alternativa; `/api/proxima` sem a lista de vistas na URL; importador
-      validando `A`–`E` e trocando URLs por regex; questões com 4 alternativas.
+- [x] Pré-requisitos antigos: `esc()` em gabarito/alternativa; `/api/proxima` sem a lista de vistas na URL; importador
+      validando `A`–`E` e trocando URLs por regex; questões com 4 alternativas (a fonte não tem a E; aviso em todas as telas, ADR 0003).
+- [x] (achado ao testar) Plano com a prova já passada mostrava "Semana da prova".
+- [x] (achado no CI) Os testes da API criam um `data/` vazio: o workflow extrai o pacote de dados com `-Force`.
+- [ ] 14 sem teste automático (simular porta tomada por outro programa é instável no Windows); conferido na leitura.
 
 **Parte 3: desempenho (PC fraco com sala cheia, tablet)**
 - [ ] 16. Rascunho: desenhar só o trecho novo no `pointermove`; cor calculada uma vez; borracha redesenha uma vez por evento.

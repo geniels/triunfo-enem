@@ -16,6 +16,7 @@ import socket
 import sqlite3
 import threading
 import time
+import unicodedata
 
 PORTAS = range(8780, 8790)
 TENTATIVAS = 5        # PINs errados seguidos antes de esperar
@@ -85,20 +86,49 @@ def _hash_falso() -> str:
     return hash_pin("0000")
 
 
+def chave_nome(nome: str) -> str:
+    """Forma de comparar nomes: espaços normalizados e maiúsculas/minúsculas com acento ("JOÃO" = "joão").
+    O COLLATE NOCASE do SQLite só ignora maiúsculas sem acento."""
+    return unicodedata.normalize("NFKC", " ".join(nome.split())).casefold()
+
+
+def achar(con: sqlite3.Connection, nome: str, com_pin: bool = True) -> int | None:
+    """Id do aluno com esse nome. shortcut: percorre a tabela em Python; ok até milhares de alunos por PC."""
+    chave = chave_nome(nome)
+    filtro = " WHERE pin_hash IS NOT NULL" if com_pin else ""
+    return next((i for i, n in con.execute(f"SELECT id, nome FROM alunos{filtro}") if chave_nome(n) == chave), None)
+
+
+CADASTROS_POR_MINUTO = 5
+_cadastros: dict[str, list[float]] = {}  # IP -> horários dos últimos cadastros (memória do processo)
+_trava_cadastros = threading.Lock()
+
+
+def pode_cadastrar(ip: str) -> bool:
+    """Limite de cadastros por aparelho: um script na rede não enche a turma nem ocupa o PC com PBKDF2."""
+    agora = time.time()
+    with _trava_cadastros:
+        recentes = [t for t in _cadastros.get(ip, []) if agora - t < 60]
+        if len(recentes) >= CADASTROS_POR_MINUTO:
+            _cadastros[ip] = recentes
+            return False
+        _cadastros[ip] = recentes + [agora]
+        return True
+
+
 def entrar(con: sqlite3.Connection, nome: str, pin: str) -> tuple[int | None, str]:
     """(id, "") se conferir; senão (None, mensagem para o aluno).
 
     A tentativa é reservada ANTES de calcular o hash, num UPDATE atômico: pedidos em paralelo não conseguem testar mais
     que TENTATIVAS PINs por janela. Nome inexistente e PIN errado dão a mesma resposta, no mesmo tempo."""
-    nome = " ".join(nome.split())
     agora = time.time()
+    aluno_id = achar(con, nome)
     with con:
         r = con.execute(
-            "UPDATE alunos SET tentativas = tentativas + 1 WHERE nome = ? COLLATE NOCASE AND pin_hash IS NOT NULL "
-            "AND (bloqueado_ate IS NULL OR bloqueado_ate <= ?) RETURNING id, pin_hash, tentativas", (nome, agora)).fetchone()
+            "UPDATE alunos SET tentativas = tentativas + 1 WHERE id = ? AND pin_hash IS NOT NULL "
+            "AND (bloqueado_ate IS NULL OR bloqueado_ate <= ?) RETURNING id, pin_hash, tentativas", (aluno_id, agora)).fetchone()
     if r is None:
-        b = con.execute("SELECT bloqueado_ate FROM alunos WHERE nome = ? COLLATE NOCASE AND pin_hash IS NOT NULL",
-                        (nome,)).fetchone()
+        b = con.execute("SELECT bloqueado_ate FROM alunos WHERE id = ?", (aluno_id,)).fetchone()
         if b and b[0] and b[0] > agora:
             return None, f"Muitas tentativas. Espere {int(b[0] - agora) + 1} segundos e tente de novo."
         pin_confere(pin, _hash_falso())  # mesmo tempo de resposta: não revela quais nomes existem
@@ -170,9 +200,12 @@ def abrir(app) -> int:
         threading.Thread(target=_servidor.run, daemon=True, name="turma").start()
         for _ in range(50):  # espera até 5 s o servidor reservar a porta
             if _servidor.started:
-                break
+                return p
             time.sleep(0.1)
-        return p
+        # Não subiu (outro programa pegou a porta entre a conferência e o uso): não diz que a turma está aberta.
+        _servidor.should_exit = True
+        _servidor = None
+        raise OSError("o servidor da turma não subiu")
 
 
 def fechar() -> None:
