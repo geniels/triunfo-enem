@@ -16,7 +16,7 @@ lemos os hooks e scripts de cada uma.
 | **ui-ux-pro-max** | Skill em `.claude/skills/ui-ux-pro-max` (só a skill principal, sem testes) | Auditoria de UX e acessibilidade por regras (`--domain ux`) | Útil na auditoria. A geração de design system acertou só a paleta e errou o estilo (sugeriu visual infantil e "AI-native"); **não persistir** a saída sem validar |
 | **agent-skills** (Addy Osmani) | Plugin, escopo do usuário | Roteiros de engenharia e 4 agentes: code-reviewer, security-auditor, test-engineer, web-performance-auditor | Útil. O agente code-reviewer achou 10 problemas reais em 2026-11-08 (5 corrigidos, o resto no ROADMAP). Inclui `interview-me`, que cobre o "grill me" |
 | **ponytail** | Plugin, escopo do usuário | Força soluções mínimas; `/ponytail-audit` audita o repositório | Útil. A auditoria coincidiu com a revisão nos itens críticos. Hooks rodam localmente; webhook desligado |
-| **graphify** | CLI (`uv tool`), skill global | Grafo do código, gerado 100% offline (`--code-only`) | Pouco valor hoje (6 arquivos de código). Reavaliar quando o código crescer. **Hook de leitura não instalado** |
+| **graphify** (pacote `graphifyy`, Graphify-Labs) | CLI (`uv tool install graphifyy`) | Grafo do código, gerado 100% offline (`--code-only`). `.graphifyignore` tira as skills de terceiros | Reinstalado em 2026-11-11: o código cresceu (25 arquivos, ~630 nós). **Hook de leitura e skill não instalados** |
 
 Avaliadas e **não instaladas** (2026-11-08):
 - **grill-me** (mattpocock/skills): entrevista o usuário sobre um plano antes de codar. Duplica o `interview-me`
