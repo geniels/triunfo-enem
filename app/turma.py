@@ -1,6 +1,8 @@
 """Modo turma (ADR 0022): um PC (o do organizador) serve o TRIunfo na rede local enquanto a turma está aberta.
 
-- O servidor normal continua só em 127.0.0.1, sem login: é o organizador no próprio PC (aluno 1).
+- O servidor normal continua só em 127.0.0.1, sem login: é o dono do PC / organizador (aluno 1).
+- O dono do PC pode definir nome e PIN para entrar pela rede como ele mesmo, no tablet ou celular, com o mesmo
+  progresso (ADR 0025). As funções de administração continuam só no próprio PC.
 - "Abrir turma" sobe um SEGUNDO servidor em 0.0.0.0. Tudo o que chega por ele exige nome + PIN de 4 dígitos.
 - O PIN é guardado como hash (PBKDF2); o aparelho fica lembrado por um cookie assinado com HMAC.
 """
@@ -18,7 +20,7 @@ PORTAS = range(8780, 8790)
 TENTATIVAS = 5        # PINs errados seguidos antes de esperar
 ESPERA_SEG = 60
 COOKIE = "triunfo_turma"
-ORGANIZADOR = 1       # o aluno "Eu" do PC do organizador
+ORGANIZADOR = 1       # o dono do PC (aluno "Eu"); entra pela rede só se tiver definido o PIN
 
 _servidor = None      # uvicorn.Server da turma, quando aberta
 _porta: int | None = None
@@ -67,7 +69,7 @@ def aluno_do_cookie(con: sqlite3.Connection, valor: str | None) -> int | None:
         aluno_id = int(texto_id)
     except ValueError:
         return None
-    r = con.execute("SELECT pin_hash FROM alunos WHERE id = ? AND id != ?", (aluno_id, ORGANIZADOR)).fetchone()
+    r = con.execute("SELECT pin_hash FROM alunos WHERE id = ?", (aluno_id,)).fetchone()
     if not r or not r[0] or not hmac.compare_digest(_assinatura(con, aluno_id, r[0]), assinatura):
         return None
     return aluno_id
@@ -76,7 +78,7 @@ def aluno_do_cookie(con: sqlite3.Connection, valor: str | None) -> int | None:
 def entrar(con: sqlite3.Connection, nome: str, pin: str) -> tuple[int | None, str]:
     """(id, "") se conferir; senão (None, mensagem para o aluno)."""
     r = con.execute("SELECT id, pin_hash, tentativas, bloqueado_ate FROM alunos WHERE nome = ? COLLATE NOCASE "
-                    "AND id != ?", (nome.strip(), ORGANIZADOR)).fetchone()
+                    "AND pin_hash IS NOT NULL", (" ".join(nome.split()),)).fetchone()
     if not r:
         return None, "Não achamos esse nome na turma. Confira como você escreveu ou escolha \"Primeira vez\"."
     agora = time.time()

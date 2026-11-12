@@ -48,9 +48,14 @@ class TestTurma(unittest.TestCase):
             self.con.execute("UPDATE alunos SET pin_hash = ? WHERE id = ?", (turma.hash_pin("9999"), self.ana))
         self.assertIsNone(turma.aluno_do_cookie(self.con, valor))
 
-    def test_organizador_nao_entra_pela_rede(self):
+    def test_dono_do_pc_so_entra_pela_rede_depois_de_criar_o_pin(self):
         self.assertIsNone(turma.entrar(self.con, "Eu", "0000")[0])
         self.assertIsNone(turma.aluno_do_cookie(self.con, "1.qualquer"))
+        with self.con:  # o que PUT /api/turma/meu-acesso faz
+            self.con.execute("UPDATE alunos SET nome = 'Geni', pin_hash = ? WHERE id = 1", (turma.hash_pin("2468"),))
+        self.assertEqual(turma.entrar(self.con, "geni", "2468"), (turma.ORGANIZADOR, ""))
+        valor = turma.cookie_para(self.con, turma.ORGANIZADOR)
+        self.assertEqual(turma.aluno_do_cookie(self.con, valor), turma.ORGANIZADOR)
 
     def test_espera_depois_de_pins_errados(self):
         for _ in range(turma.TENTATIVAS):

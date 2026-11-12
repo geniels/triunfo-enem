@@ -18,6 +18,10 @@ O nome junta a **TRI** (Teoria de Resposta ao Item, o método de correção do E
 2. Dê dois cliques e avance. Não precisa de senha de administrador.
 3. Abra pelo atalho **TRIunfo ENEM** no Menu Iniciar ou na Área de Trabalho. Ele abre no navegador.
 
+**No tablet ou celular:** em Configurações → *Outros aparelhos e turma*, crie seu nome e PIN e clique em *Abrir
+acesso pela rede*. No outro aparelho, na mesma rede Wi-Fi, digite o endereço que aparecer (o `127.0.0.1` só funciona
+no próprio computador) e entre com seu nome e PIN: o progresso é o mesmo.
+
 Tudo já vem dentro do instalador (questões, imagens e parâmetros da nota TRI): **funciona sem internet desde o
 primeiro minuto**. Para atualizar, instale a versão nova por cima: seu progresso é mantido.
 
@@ -89,7 +93,7 @@ de estudante vai para serviços que o usem para treinar inteligência artificial
 
 | | Estudante | Modo turma |
 |---|---|---|
-| Para quem | Quem estuda sozinho | Uma escola, um cursinho ou um grupo de amigos que estudam juntos |
+| Para quem | Quem estuda sozinho (também no próprio tablet ou celular, com o mesmo progresso) | Uma escola, um cursinho ou um grupo de amigos que estudam juntos |
 | Quem organiza | Ninguém: instalar, abrir e usar | O organizador (professor ou um dos amigos) abre a turma no seu PC |
 | Como entra | Direto | Pelo navegador, na mesma rede Wi-Fi, com nome e PIN de 4 dígitos |
 

@@ -1245,16 +1245,17 @@ async function telaConfig() {
     </section>
     ${eu.modo === "turma" ? `
     <section class="cartao">
-      <h2>Sua conta na turma</h2>
+      <h2>Sua conta</h2>
       <p>Você entrou como <b>${esc(eu.aluno.nome)}</b>. Este aparelho fica lembrado.</p>
       <p class="sub">Num computador que outras pessoas usam, saia ao terminar.</p>
       <div class="acoes"><button class="botao secundario" id="sair">Sair</button></div>
     </section>` : `
     <section class="cartao" aria-labelledby="turma-titulo">
-      <h2 id="turma-titulo">Modo turma</h2>
-      <p class="sub">Estude junto com colegas na mesma rede Wi-Fi: numa escola, num cursinho ou com amigos. Este
-        computador vira o da turma; os outros entram pelo navegador, com nome e um PIN de 4 números. Tudo fica
-        guardado só neste computador.</p>
+      <h2 id="turma-titulo">Outros aparelhos e turma</h2>
+      <p class="sub">Use o TRIunfo deste computador em outros aparelhos na mesma rede Wi-Fi: no <b>seu tablet ou
+        celular</b>, com o mesmo progresso, ou com <b>colegas</b> (escola, cursinho, amigos), cada um com o seu. Os
+        outros aparelhos entram pelo navegador, com nome e um PIN de 4 números. Tudo fica guardado só neste computador,
+        que precisa estar ligado com o TRIunfo aberto.</p>
       <div id="turma-corpo"><p class="carregando">Carregando…</p></div>
     </section>`}
     <section class="cartao" ${eu.modo === "turma" ? "hidden" : ""}>
@@ -1394,15 +1395,31 @@ function desenharTurma(t, aviso = "") {
   corpo.innerHTML = `
     ${t.aberta ? `
       <div class="retorno destaque-aviso">
-        <b>Turma aberta.</b> Os colegas, conectados na mesma rede Wi-Fi, digitam no navegador:
+        <b>Acesso pela rede aberto.</b> No outro aparelho, conectado na mesma rede Wi-Fi, digite no navegador:
         <p class="endereco">${esc(t.endereco)}</p>
-        <small>A turma fica aberta até você clicar em "Fechar turma" ou fechar o TRIunfo.</small>
+        <small>Fica aberto até você fechar aqui ou fechar o TRIunfo. O endereço com 127.0.0.1 ou localhost só funciona
+          neste computador.</small>
       </div>
-      <div class="acoes"><button class="botao secundario" id="turma-fechar">Fechar turma</button></div>` : `
+      <div class="acoes"><button class="botao secundario" id="turma-fechar">Fechar o acesso pela rede</button></div>` : `
       <p class="sub">Ao abrir, o Windows pode perguntar sobre o <b>Firewall</b>: marque <b>Redes privadas</b> e
-        clique em <b>Permitir acesso</b>. Sem isso, os colegas não conseguem entrar.</p>
-      <div class="acoes"><button class="botao" id="turma-abrir">Abrir turma</button></div>`}
-    <div aria-live="polite">${aviso}</div>
+        clique em <b>Permitir acesso</b>. Sem isso, os outros aparelhos não conseguem entrar.</p>
+      <div class="acoes"><button class="botao" id="turma-abrir">Abrir acesso pela rede</button></div>`}
+    <div class="meu-acesso">
+      <h3>Seu acesso nos outros aparelhos</h3>
+      <p class="sub">${t.meu_acesso.definido
+        ? `No tablet ou celular, escolha "Já tenho acesso" e entre como <b>${esc(t.meu_acesso.nome)}</b> com o seu PIN: o
+           progresso é o mesmo deste computador. Para trocar o nome ou o PIN, preencha de novo.`
+        : `Para estudar no seu tablet ou celular com o mesmo progresso deste computador, escolha um nome e um PIN. Quem
+           vai usar só com colegas não precisa disso.`}</p>
+      <form id="meu-acesso" class="campos" novalidate>
+        <label>Seu nome <input id="ma-nome" maxlength="40" autocomplete="name"
+          value="${t.meu_acesso.definido ? esc(t.meu_acesso.nome) : ""}"></label>
+        <label>PIN de 4 números <input id="ma-pin" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+        <label>Repita o PIN <input id="ma-pin2" type="password" inputmode="numeric" maxlength="4" autocomplete="off"></label>
+        <div class="acoes"><button class="botao secundario" type="submit">${t.meu_acesso.definido ? "Trocar meu acesso" : "Criar meu acesso"}</button></div>
+      </form>
+    </div>
+    <div id="turma-aviso" aria-live="polite">${aviso}</div>
     ${t.participantes.length ? `
       <div class="tabela"><table>
         <caption>Participantes (${t.participantes.length})</caption>
@@ -1420,6 +1437,24 @@ function desenharTurma(t, aviso = "") {
     } catch (e) {
       desenharTurma(t, `<div class="retorno nao">${esc(e.message)}</div>`);
     }
+  };
+  $("#meu-acesso").onsubmit = (e) => {
+    e.preventDefault();
+    const nome = $("#ma-nome").value.trim(), pin = $("#ma-pin").value;
+    const falha = (msg, campo) => { // sem redesenhar: não apaga o que a pessoa digitou
+      $("#turma-aviso").innerHTML = `<div class="retorno nao">${esc(msg)}</div>`;
+      $(campo)?.focus();
+    };
+    if (nome.length < 2) return falha("Escreva seu nome.", "#ma-nome");
+    if (!/^\d{4}$/.test(pin)) return falha("O PIN tem exatamente 4 números.", "#ma-pin");
+    if (pin !== $("#ma-pin2").value) return falha("Os dois PINs estão diferentes. Digite de novo.", "#ma-pin");
+    acao(e.submitter || $("#meu-acesso button"), async () => {
+      const novo = await api("/api/turma/meu-acesso", {
+        method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ nome, pin }),
+      });
+      desenharTurma(novo, `<div class="retorno ok">Pronto! No outro aparelho, entre como <b>${esc(novo.meu_acesso.nome)}</b>
+        com o seu PIN.${novo.aberta ? "" : " Antes, clique em <b>Abrir acesso pela rede</b>."}</div>`);
+    });
   };
   const abrir = $("#turma-abrir");
   if (abrir) abrir.onclick = () => acao(abrir, async () => {
@@ -1464,9 +1499,9 @@ function telaEntrar() {
   conteudo.innerHTML = `
     <section class="cartao config entrar">
       <img src="/static/icone.svg" alt="" width="64" height="64">
-      <h1>Entrar na turma</h1>
-      <p class="sub">Este TRIunfo é de uma turma. Entre com seu nome e um PIN de 4 números para guardar o seu
-        progresso. Este aparelho fica lembrado.</p>
+      <h1>Entrar no TRIunfo</h1>
+      <p class="sub">Entre com seu nome e um PIN de 4 números para guardar o seu progresso. Se o computador é seu, use o
+        nome e o PIN que você criou em Configurações. Este aparelho fica lembrado.</p>
       <fieldset><legend>Você já entrou antes?</legend>
         <div class="chips" id="e-modo">
           <button type="button" data-v="nao" class="ativo" aria-pressed="true">Já tenho acesso</button>
@@ -1486,7 +1521,7 @@ function telaEntrar() {
             <input id="e-pin2" type="password" inputmode="numeric" maxlength="4" autocomplete="off">
           </label>
         </div>
-        <p class="sub" id="e-dica">Esqueceu o PIN? Peça um novo a quem organiza a turma.</p>
+        <p class="sub" id="e-dica">Esqueceu o PIN? Peça um novo a quem organiza a turma ou, se o computador é seu, troque em Configurações.</p>
         <div class="acoes"><button class="botao" type="submit" id="e-botao">Entrar</button></div>
         <div id="e-erro" class="retorno nao" role="alert" hidden></div>
       </form>
@@ -1505,7 +1540,7 @@ function telaEntrar() {
     $("#e-botao").textContent = primeira ? "Criar meu acesso" : "Entrar";
     $("#e-dica").textContent = primeira
       ? "Use nome e sobrenome, como os colegas conhecem você. Escolha um PIN fácil de lembrar e não conte para ninguém."
-      : "Esqueceu o PIN? Peça um novo a quem organiza a turma.";
+      : "Esqueceu o PIN? Peça um novo a quem organiza a turma ou, se o computador é seu, troque em Configurações.";
     $("#e-erro").hidden = true;
   };
 

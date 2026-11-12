@@ -785,7 +785,22 @@ def ver_turma(con: Con):
                   COUNT(r.id) AS respondidas, SUM(r.correta) AS acertos, MAX(r.criado_em) AS ultima_atividade
            FROM alunos a LEFT JOIN respostas r ON r.aluno_id = a.id
            WHERE a.id != ? GROUP BY a.id ORDER BY a.nome COLLATE NOCASE""", (turma.ORGANIZADOR,))]
-    return {"aberta": turma.porta() is not None, "endereco": turma.endereco(), "participantes": participantes}
+    dono = con.execute("SELECT nome, pin_hash IS NOT NULL FROM alunos WHERE id = ?", (turma.ORGANIZADOR,)).fetchone()
+    return {"aberta": turma.porta() is not None, "endereco": turma.endereco(), "participantes": participantes,
+            "meu_acesso": {"nome": dono[0], "definido": bool(dono[1])}}
+
+
+@app.put("/api/turma/meu-acesso", dependencies=[Organizador])
+def definir_meu_acesso(a: Acesso, con: Con):
+    """Nome e PIN do dono do PC para usar o mesmo progresso no tablet ou celular (ADR 0025)."""
+    nome = " ".join(a.nome.split())
+    try:
+        with con:
+            con.execute("UPDATE alunos SET nome = ?, pin_hash = ?, tentativas = 0, bloqueado_ate = NULL WHERE id = ?",
+                        (nome, turma.hash_pin(a.pin), turma.ORGANIZADOR))
+    except sqlite3.IntegrityError:
+        raise HTTPException(409, "Já existe um participante com esse nome. Use outro, por exemplo com o sobrenome.")
+    return ver_turma(con)
 
 
 @app.post("/api/turma/abrir", dependencies=[Organizador])

@@ -375,3 +375,9 @@ body:has(.rascunho-barra:not([hidden])) .conteudo { padding-bottom: 5.5rem; }
 .opcao { display: flex; gap: .6rem; align-items: flex-start; margin-top: 1rem; }
 .opcao input { width: 1.2rem; height: 1.2rem; margin-top: .2rem; accent-color: var(--primaria); flex: none; }
 .opcao small { display: block; color: var(--suave); }
+.meu-acesso { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--linha); }
+.meu-acesso h3 { margin: 0 0 .25rem; font-size: 1.05rem; }
+.meu-acesso input { font: inherit; padding: .5rem .7rem; border-radius: 8px; border: 1px solid var(--linha);
+  background: var(--cartao); color: var(--texto); min-width: 0; }
+.meu-acesso .campos label { flex: 1 1 9rem; }
+.meu-acesso .acoes { flex-basis: 100%; margin-top: 0; }

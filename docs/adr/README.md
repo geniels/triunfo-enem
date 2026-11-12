@@ -29,9 +29,10 @@ sem precisar redescobrir por que as coisas são como são.
 | [0019](0019-atualizacao-um-clique.md) | Atualização em 1 clique, com conferência de integridade | Aceita |
 | [0020](0020-identidade-visual.md) | Identidade visual: troféu com capelo e cara de prova | Aceita |
 | [0021](0021-build-no-github-actions.md) | Instalador gerado no GitHub Actions, pronto para assinatura | Aceita |
-| [0022](0022-modo-turma.md) | Modo turma: estudar em grupo na rede local, com nome e PIN | Aceita |
+| [0022](0022-modo-turma.md) | Modo turma: estudar em grupo na rede local, com nome e PIN | Aceita (alterada pela 0025) |
 | [0023](0023-rascunho-com-caneta.md) | Rascunho com caneta sobre a questão | Aceita |
 | [0024](0024-lembrete-de-versao-nova.md) | Lembrete de versão nova na tela inicial | Aceita |
+| [0025](0025-meus-outros-aparelhos.md) | O dono do PC usa o mesmo progresso no tablet ou celular | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

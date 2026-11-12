@@ -3,6 +3,7 @@
 - **Status:** Aceita
 - **Data:** 2026-11-10
 - **Altera:** ADR 0010 (a edição "Escola" passa a ser o **modo turma**)
+- **Alterada por:** ADR 0025 (o dono do PC pode entrar pela rede com o próprio nome e PIN)
 
 ## Contexto
 A Fase 4 previa um "modo escola". O mesmo recurso serve a uma escola, a um cursinho ou a um grupo de amigos que
