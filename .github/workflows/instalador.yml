@@ -39,7 +39,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           gh release download $env:DADOS --pattern dados.zip --dir .
-          Expand-Archive dados.zip -DestinationPath data
+          Expand-Archive dados.zip -DestinationPath data -Force  # os testes já criaram um data/ vazio
 
       - name: Montar o instalador
         run: python instalador/construir.py
