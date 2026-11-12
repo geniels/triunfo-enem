@@ -19,7 +19,7 @@ propaganda, rastreamento nem estatísticas de uso.
 Essas consultas não enviam nenhum dado seu. Como em qualquer acesso a um site, o GitHub recebe o endereço IP do seu
 computador; veja a [política de privacidade do GitHub](https://docs.github.com/pt/site-policy/privacy-policies/github-general-privacy-statement).
 
-## Modo turma (em desenvolvimento)
+## Modo turma
 Quando um grupo estuda junto pela rede local, os dados dos participantes (nome, PIN e progresso) ficam só no
 computador de quem organiza a turma, sem passar pela internet. O PIN é guardado de forma protegida (hash), nunca
 como texto.
@@ -45,7 +45,7 @@ Dúvidas: abra uma *issue* em <https://github.com/geniels/triunfo-enem/issues>.
   without a click). When the user clicks **Check for updates**, it also downloads the latest exam guide and, if
   asked, the installer. No personal data is
   sent; as with any web request, GitHub sees the computer's IP address.
-- **Group mode (in development):** when a group studies together over a local network, participants' data (name,
+- **Group mode:** when a group studies together over a local network, participants' data (name,
   PIN and progress) stays only on the organizer's computer. PINs are stored as hashes.
 - **AI:** no student data is ever sent to services that use it to train AI models.
 - **Contact:** <https://github.com/geniels/triunfo-enem/issues>

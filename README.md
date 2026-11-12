@@ -87,7 +87,7 @@ de estudante vai para serviços que o usem para treinar inteligência artificial
 
 ## Edições
 
-| | Estudante | Modo turma (em desenvolvimento) |
+| | Estudante | Modo turma |
 |---|---|---|
 | Para quem | Quem estuda sozinho | Uma escola, um cursinho ou um grupo de amigos que estudam juntos |
 | Quem organiza | Ninguém: instalar, abrir e usar | O organizador (professor ou um dos amigos) abre a turma no seu PC |
