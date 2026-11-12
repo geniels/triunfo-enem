@@ -8,6 +8,7 @@
 """
 from __future__ import annotations
 
+import functools
 import hashlib
 import hmac
 import secrets
@@ -75,29 +76,45 @@ def aluno_do_cookie(con: sqlite3.Connection, valor: str | None) -> int | None:
     return aluno_id
 
 
+NAO_CONFERE = ("Nome ou PIN não conferem. Confira o que você digitou; se esqueceu o PIN, peça um novo a quem organiza "
+               "a turma (ou, se o computador é seu, troque em Configurações).")
+
+
+@functools.cache
+def _hash_falso() -> str:
+    return hash_pin("0000")
+
+
 def entrar(con: sqlite3.Connection, nome: str, pin: str) -> tuple[int | None, str]:
-    """(id, "") se conferir; senão (None, mensagem para o aluno)."""
-    r = con.execute("SELECT id, pin_hash, tentativas, bloqueado_ate FROM alunos WHERE nome = ? COLLATE NOCASE "
-                    "AND pin_hash IS NOT NULL", (" ".join(nome.split()),)).fetchone()
-    if not r:
-        return None, "Não achamos esse nome na turma. Confira como você escreveu ou escolha \"Primeira vez\"."
+    """(id, "") se conferir; senão (None, mensagem para o aluno).
+
+    A tentativa é reservada ANTES de calcular o hash, num UPDATE atômico: pedidos em paralelo não conseguem testar mais
+    que TENTATIVAS PINs por janela. Nome inexistente e PIN errado dão a mesma resposta, no mesmo tempo."""
+    nome = " ".join(nome.split())
     agora = time.time()
-    if r["bloqueado_ate"] and r["bloqueado_ate"] > agora:
-        falta = int(r["bloqueado_ate"] - agora) + 1
-        return None, f"Muitas tentativas. Espere {falta} segundos e tente de novo."
+    with con:
+        r = con.execute(
+            "UPDATE alunos SET tentativas = tentativas + 1 WHERE nome = ? COLLATE NOCASE AND pin_hash IS NOT NULL "
+            "AND (bloqueado_ate IS NULL OR bloqueado_ate <= ?) RETURNING id, pin_hash, tentativas", (nome, agora)).fetchone()
+    if r is None:
+        b = con.execute("SELECT bloqueado_ate FROM alunos WHERE nome = ? COLLATE NOCASE AND pin_hash IS NOT NULL",
+                        (nome,)).fetchone()
+        if b and b[0] and b[0] > agora:
+            return None, f"Muitas tentativas. Espere {int(b[0] - agora) + 1} segundos e tente de novo."
+        pin_confere(pin, _hash_falso())  # mesmo tempo de resposta: não revela quais nomes existem
+        return None, NAO_CONFERE
+    if r["tentativas"] > TENTATIVAS:  # pedidos em paralelo já gastaram as tentativas desta janela
+        return None, "Muitas tentativas. Espere 1 minuto e tente de novo."
     if pin_confere(pin, r["pin_hash"]):
         with con:
             con.execute("UPDATE alunos SET tentativas = 0, bloqueado_ate = NULL WHERE id = ?", (r["id"],))
         return r["id"], ""
-    tentativas = r["tentativas"] + 1
-    with con:
-        if tentativas >= TENTATIVAS:
+    if r["tentativas"] >= TENTATIVAS:
+        with con:
             con.execute("UPDATE alunos SET tentativas = 0, bloqueado_ate = ? WHERE id = ?", (agora + ESPERA_SEG, r["id"]))
-        else:
-            con.execute("UPDATE alunos SET tentativas = ? WHERE id = ?", (tentativas, r["id"]))
-    if tentativas >= TENTATIVAS:
-        return None, f"PIN errado {TENTATIVAS} vezes. Espere 1 minuto. Se esqueceu o PIN, peça um novo ao organizador da turma."
-    return None, "PIN errado. Se esqueceu, peça um novo ao organizador da turma."
+        return None, (f"PIN errado {TENTATIVAS} vezes. Espere 1 minuto. Se esqueceu o PIN, peça um novo a quem organiza "
+                      "a turma.")
+    return None, NAO_CONFERE
 
 
 # ---------------------------- Servidor da rede ----------------------------

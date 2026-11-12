@@ -5,22 +5,24 @@
     return s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  function urlSegura(u) {
-    return u.startsWith("/imagens/") || u.startsWith("https://") ? u : null;
-  }
-
+  // Imagens e links viram marcadores (\u0000n\u0000) antes das outras trocas e só voltam como HTML no fim:
+  // nenhuma regra roda sobre HTML já montado (antes, imagem e link aninhados escapavam do atributo alt).
   function inline(s) {
-    s = s.replace(/!\[([^\]]*)\]\(([^)\s]+)\)/g, (m, alt, url) => {
-      if (url.includes("broken-image.svg")) return '<span class="img-faltando">[imagem indisponível na fonte]</span>';
-      const u = urlSegura(url.replace(/&amp;/g, "&"));
-      return u ? `<img src="${escapar(u)}" alt="${alt || "Imagem da questão"}" loading="lazy">` : "";
+    const guardados = [];
+    const guardar = (html) => `\u0000${guardados.push(html) - 1}\u0000`;
+    s = s.replace(/!\[([^\[\]]*)\]\(([^()\s]+)\)/g, (m, alt, url) => {
+      // Só imagens locais: o TRIunfo funciona offline e não busca nada fora (ADR 0002).
+      if (!url.startsWith("/imagens/")) return guardar('<span class="img-faltando">[imagem indisponível na fonte]</span>');
+      return guardar(`<img src="${escapar(url.replace(/&amp;/g, "&"))}" alt="${alt || "Imagem da questão"}" loading="lazy">`);
     });
     // Links só para https:// ou âncoras internas (#rota): nada de javascript: vindo de conteúdo baixado.
-    s = s.replace(/\[([^\]]+)\]\((https:\/\/[^)\s]+|#[\w-]+)\)/g, (m, t, url) =>
-      `<a href="${url}"${url.startsWith("#") ? "" : ' target="_blank" rel="noopener"'}>${t}</a>`);
+    s = s.replace(/\[([^\[\]]+)\]\((https:\/\/[^()\s]+|#[\w-]+)\)/g, (m, t, url) =>
+      guardar(`<a href="${url}"${url.startsWith("#") ? "" : ' target="_blank" rel="noopener"'}>${t}</a>`));
     s = s.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
     s = s.replace(/(^|[^*])\*([^*\s][^*]*)\*/g, "$1<em>$2</em>");
     s = s.replace(/(^|\s)_([^_]+)_(?=\s|$|[.,;:!?])/g, "$1<em>$2</em>");
+    // Um link pode conter uma imagem: devolve em até duas passadas.
+    for (let i = 0; i < 2; i++) s = s.replace(/\u0000(\d+)\u0000/g, (m, n) => guardados[n]);
     return s;
   }
 

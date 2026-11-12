@@ -8,15 +8,19 @@
      da questão. Voltam quando a questão reaparece: na prática, revisão, caderno de erros e revisão do simulado.
 */
 const Rascunho = (() => {
-  const guardados = new Map(); // chave -> { tracos, historico, carregado } (cache da página)
+  // Sem cache de traços entre telas: o servidor é a fonte (o mesmo rascunho pode ter mudado no tablet). Guarda só o
+  // último salvamento de cada questão, para a próxima leitura esperar por ele.
+  const envios = new Map(); // chave -> Promise do último PUT
   const ESPERA_SALVAR_MS = 1500;
 
   function enviar(chave, dados) {
     const corpo = JSON.stringify({ tracos: dados.tracos.map(({ tipo, pressao, pontos }) => ({ tipo, pressao, pontos })) });
     // keepalive: o salvamento termina mesmo se a pessoa fechar a aba logo depois do último traço.
-    return fetch(`/api/rascunhos/${chave}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: corpo, keepalive: corpo.length < 60000 })
+    const envio = fetch(`/api/rascunhos/${chave}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: corpo, keepalive: corpo.length < 60000 })
       .then((r) => avisar(r.ok ? "" : r.status === 413 ? "Rascunho grande demais nesta questão: use Limpar." : "Não foi possível guardar o rascunho."))
       .catch(() => avisar("Não foi possível guardar o rascunho. Ele continua aqui enquanto a página estiver aberta."));
+    envios.set(chave, envio);
+    return envio;
   }
 
   function avisar(texto) {
@@ -86,21 +90,25 @@ const Rascunho = (() => {
      de confirmar continuarem clicáveis. Devolve a função que desliga. */
   function ligar(area, chave, ate) {
     atual?.desligar();
-    const dados = guardados.get(chave) || { tracos: [], historico: [], carregado: false, carregando: null };
-    guardados.set(chave, dados);
+    const dados = { tracos: [], historico: [], carregado: false };
     let timer = null;
     const mudou = () => {
       clearTimeout(timer);
+      // Antes de carregar o salvo, um PUT só com os traços novos apagaria o rascunho guardado.
+      if (!dados.carregado) return;
       timer = setTimeout(() => { timer = null; enviar(chave, dados); }, ESPERA_SALVAR_MS);
     };
-    // Um carregamento por questão, mesmo se a tela for desenhada duas vezes; quando chega, desenha na camada
-    // que estiver ligada para esta chave (a que começou o carregamento pode já ter sido trocada).
-    dados.carregando ??= fetch(`/api/rascunhos/${chave}`).then((r) => (r.ok ? r.json() : null)).then((d) => {
-      if (!d) return;
-      dados.carregado = true;
-      dados.tracos = [...d.tracos, ...dados.tracos]; // traços feitos enquanto carregava ficam por cima
-    }).catch(() => {});
-    dados.carregando.then(() => { if (atual === camada) desenhar(); });
+    // Lê depois do último salvamento desta questão, para não trazer uma versão anterior a ele.
+    (envios.get(chave) || Promise.resolve())
+      .then(() => fetch(`/api/rascunhos/${chave}`))
+      .then((r) => (r.ok ? r.json() : Promise.reject(r)))
+      .then((d) => {
+        dados.tracos = [...d.tracos, ...dados.tracos]; // traços feitos enquanto carregava ficam por cima
+        dados.carregado = true;
+        if (dados.historico.length) mudou(); // riscou enquanto carregava: guarda o conjunto
+        if (atual === camada) desenhar();
+      })
+      .catch(() => avisar("Não foi possível abrir o rascunho salvo desta questão. O que você riscar agora não será guardado."));
     const canvas = document.createElement("canvas");
     canvas.className = "rascunho-camada";
     canvas.setAttribute("aria-hidden", "true");
@@ -219,6 +227,7 @@ const Rascunho = (() => {
       },
       desligar() {
         if (timer) { clearTimeout(timer); timer = null; enviar(chave, dados); } // salva o que faltava
+        avisar("");
         observador.disconnect();
         tema.disconnect();
         canvas.remove();
@@ -241,7 +250,7 @@ const Rascunho = (() => {
   }
 
   // Troca de pessoa no modo turma: o cache da página não pode mostrar o rascunho de outra.
-  const esquecer = () => guardados.clear();
+  const esquecer = () => envios.clear();
 
   return { ligar, esquecer };
 })();

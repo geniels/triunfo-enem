@@ -5,7 +5,11 @@ Abrir:  http://localhost:8000
 """
 from __future__ import annotations
 
+import base64
+import hashlib
+import ipaddress
 import json
+import re
 import secrets
 import sqlite3
 import time
@@ -15,7 +19,7 @@ from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Query, Request, Response
 from fastapi import Path as FPath
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
@@ -45,8 +49,9 @@ Con = Annotated[sqlite3.Connection, Depends(banco)]
 
 
 def pela_turma(request: Request) -> bool:
-    """A requisição chegou pelo servidor da turma (rede local), e não pelo do próprio PC."""
-    return request.scope.get("server", (None, None))[1] == turma.porta()
+    """A requisição chegou pelo servidor da turma (rede local), e não pelo do próprio PC.
+    Pela faixa de portas, e não pelo estado da turma: ao fechar, um pedido em andamento não vira administrador."""
+    return request.scope.get("server", (None, None))[1] in turma.PORTAS
 
 
 def aluno_atual(request: Request, con: Con) -> int:
@@ -68,11 +73,52 @@ Aluno = Annotated[int, Depends(aluno_atual)]
 Organizador = Depends(so_organizador)
 
 
+# Proteção contra ataques vindos de sites da internet (ADR 0026). O servidor local não tem login porque só o próprio PC
+# o alcança, mas o navegador do aluno pode ser usado por outro site: CSRF (POST para 127.0.0.1), DNS rebinding (um
+# domínio que passa a apontar para 127.0.0.1 e lê as respostas) e clickjacking (a tela dentro de um iframe).
+_script_inline = re.search(r"<script>(.*?)</script>", (STATIC_DIR / "index.html").read_text(encoding="utf-8"), re.S)
+_hash_script = base64.b64encode(hashlib.sha256(_script_inline.group(1).encode()).digest()).decode()
+CSP = (f"default-src 'self'; script-src 'self' 'sha256-{_hash_script}'; style-src 'self' 'unsafe-inline'; "
+       "img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; "
+       "frame-ancestors 'none'")
+SEGUROS = {"GET", "HEAD", "OPTIONS"}
+
+
+def host_permitido(host: str) -> bool:
+    """Só endereço IP ou localhost: o DNS rebinding precisa de um nome de domínio no Host."""
+    nome = host.rsplit(":", 1)[0].strip("[]") if not host.endswith("]") else host.strip("[]")
+    if nome == "localhost":
+        return True
+    try:
+        ipaddress.ip_address(nome)
+        return True
+    except ValueError:
+        return False
+
+
+def origem_estranha(request: Request) -> bool:
+    """Pedido que altera dados vindo de outro site (CSRF). Pedidos sem Origin (não são de navegador) passam."""
+    if request.method in SEGUROS:
+        return False
+    if request.headers.get("sec-fetch-site") == "cross-site":
+        return True
+    origem = request.headers.get("origin")
+    return origem is not None and origem != f"http://{request.headers.get('host', '')}"
+
+
 @app.middleware("http")
-async def sem_cache(request: Request, call_next):
+async def protecao_e_cache(request: Request, call_next):
+    if not host_permitido(request.headers.get("host", "")):
+        return JSONResponse({"detail": "Endereço não permitido. Abra o TRIunfo pelo atalho ou pelo endereço mostrado nele."}, 400)
+    if origem_estranha(request):
+        return JSONResponse({"detail": "Pedido vindo de outro site foi recusado."}, 403)
     resposta = await call_next(request)
     # Força o navegador a conferir (304 é barato): sem isso, uma atualização do app não aparece para o aluno.
     resposta.headers["Cache-Control"] = "no-cache"
+    resposta.headers["Content-Security-Policy"] = CSP
+    resposta.headers["X-Frame-Options"] = "DENY"
+    resposta.headers["X-Content-Type-Options"] = "nosniff"
+    resposta.headers["Referrer-Policy"] = "no-referrer"
     return resposta
 
 
@@ -634,21 +680,23 @@ def abrir_simulado(con: Con, aluno: Aluno, sid: int):
 
 @app.patch("/api/simulados/{sid}")
 def atualizar_simulado(con: Con, aluno: Aluno, sid: int, a: AtualizaSimulado):
-    s = _simulado(con, aluno, sid)
-    if s["entregue"]:
-        raise HTTPException(409, "Este simulado já foi entregue.")
-    validas = set(s["questoes"])
-    if a.respostas:
-        if not set(a.respostas) <= validas:
-            raise HTTPException(422, "Questão que não faz parte deste simulado.")
-        for qid, letra in a.respostas.items():
-            if letra is None:
-                s["respostas"].pop(str(qid), None)
-            else:
-                s["respostas"][str(qid)] = letra
-    if a.marcadas is not None:
-        s["marcadas"] = sorted(set(a.marcadas) & validas)
+    # BEGIN IMMEDIATE: ler-alterar-gravar o JSON sem que outro salvamento simultâneo apague uma resposta.
     with con:
+        con.execute("BEGIN IMMEDIATE")
+        s = _simulado(con, aluno, sid)
+        if s["entregue"]:
+            raise HTTPException(409, "Este simulado já foi entregue.")
+        validas = set(s["questoes"])
+        if a.respostas:
+            if not set(a.respostas) <= validas:
+                raise HTTPException(422, "Questão que não faz parte deste simulado.")
+            for qid, letra in a.respostas.items():
+                if letra is None:
+                    s["respostas"].pop(str(qid), None)
+                else:
+                    s["respostas"][str(qid)] = letra
+        if a.marcadas is not None:
+            s["marcadas"] = sorted(set(a.marcadas) & validas)
         con.execute(
             "UPDATE simulados SET respostas = ?, marcadas = ?, tempo_seg = COALESCE(?, tempo_seg) WHERE id = ?",
             (json.dumps(s["respostas"]), json.dumps(s["marcadas"]), a.tempo_seg, sid),
@@ -658,10 +706,11 @@ def atualizar_simulado(con: Con, aluno: Aluno, sid: int, a: AtualizaSimulado):
 
 @app.post("/api/simulados/{sid}/entregar")
 def entregar_simulado(con: Con, aluno: Aluno, sid: int):
-    s = _simulado(con, aluno, sid)
-    if s["entregue"]:
-        raise HTTPException(409, "Este simulado já foi entregue.")
     with con:
+        con.execute("BEGIN IMMEDIATE")  # duas entregas ao mesmo tempo (duplo clique) não duplicam o histórico
+        s = _simulado(con, aluno, sid)
+        if s["entregue"]:
+            raise HTTPException(409, "Este simulado já foi entregue.")
         con.execute("UPDATE simulados SET entregue = 1 WHERE id = ?", (sid,))
         # As respostas entram no histórico: erros vão para o caderno de erros e para o painel.
         for item in _resultado(con, s)["itens"]:

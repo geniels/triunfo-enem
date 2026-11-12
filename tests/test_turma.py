@@ -10,7 +10,7 @@ from app import db, turma
 class TestTurma(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
-        pasta = Path(self.tmp.name)
+        pasta = self.pasta = Path(self.tmp.name)
         sqlite3.connect(pasta / "questoes.db").close()
         self.con = db.conectar(pasta)
         db.criar_tabelas(self.con)
@@ -68,6 +68,34 @@ class TestTurma(unittest.TestCase):
             self.con.execute("UPDATE alunos SET bloqueado_ate = 0")
         self.assertEqual(turma.entrar(self.con, "Ana", "1234")[0], self.ana)
 
+
+    def test_tentativas_em_paralelo_nao_furam_o_limite(self):
+        """Antes, pedidos simultâneos liam tentativas=0 juntos e testavam dezenas de PINs por minuto."""
+        import threading
+        conferidos = []
+        original = turma.pin_confere
+
+        def contar(pin, guardado):
+            if guardado != turma._hash_falso():
+                conferidos.append(pin)
+            return original(pin, guardado)
+
+        turma.pin_confere = contar
+        try:
+            def tentar(pin):
+                con = db.abrir(self.pasta)
+                turma.entrar(con, "Ana", pin)
+                con.close()
+
+            t = [threading.Thread(target=tentar, args=(f"{n:04d}",)) for n in range(5000, 5030)]
+            [x.start() for x in t]
+            [x.join() for x in t]
+        finally:
+            turma.pin_confere = original
+        self.assertLessEqual(len(conferidos), turma.TENTATIVAS)
+
+    def test_mesma_resposta_para_nome_inexistente_e_pin_errado(self):
+        self.assertEqual(turma.entrar(self.con, "Ninguém", "1234")[1], turma.entrar(self.con, "Ana", "0000")[1])
 
 if __name__ == "__main__":
     unittest.main()

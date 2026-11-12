@@ -24,7 +24,7 @@ O rascunho fica salvo no `aluno.db` e volta na prática, no caderno de erros e n
 Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 **Lembrete de versão nova** na tela inicial, com consulta diária desligável (ADR 0024).
 **Tablet do próprio estudante** com o mesmo progresso do PC (ADR 0025). Versão **0.5.2** (lembrete + tablet).
-**Próximo passo:** correções da revisão geral (seção abaixo), Parte 1 a 4; depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
+**Próximo passo:** correções da revisão geral (seção abaixo), Partes 2 a 4 (a 1 está pronta); depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -56,19 +56,21 @@ Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 Revisão com os agentes do agent-skills (code-reviewer, security-auditor, test-engineer, web-performance-auditor) e o
 `/ponytail-audit`. O autor pediu para corrigir todos os achados. Cada parte termina com testes, commit e versão.
 
-**Parte 1: segurança e perda de dados**
-- [ ] 1. Prática: `renderizarQuestao` não chama o `limparTela` anterior. O teclado de questões antigas grava respostas falsas.
-- [ ] 2. Ataques vindos da web contra o servidor local: CSRF (POST de outro site), DNS rebinding (leitura dos dados) e
+**Parte 1: segurança e perda de dados** ✅ (versão 0.5.3, ADR 0026)
+- [x] 1. Prática: `renderizarQuestao` não chama o `limparTela` anterior. O teclado de questões antigas grava respostas falsas.
+- [x] 2. Ataques vindos da web contra o servidor local: CSRF (POST de outro site), DNS rebinding (leitura dos dados) e
       clickjacking. Middleware com Host permitido, Origin/`Sec-Fetch-Site` nos métodos que alteram dados, cabeçalhos
       de segurança (CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy`). Registrar em ADR.
-- [ ] 3. XSS no `markdown.js` com imagem e link aninhados (`![a [b](https://x) c](...)`). Reescrever sem reprocessar HTML + CSP.
-- [ ] 4. Força bruta do PIN: tentativas em paralelo furam a espera. Contar a tentativa de forma atômica antes do hash e
+- [x] 3. XSS no `markdown.js` com imagem e link aninhados (`![a [b](https://x) c](...)`). Reescrever sem reprocessar HTML + CSP.
+- [x] 4. Força bruta do PIN: tentativas em paralelo furam a espera. Contar a tentativa de forma atômica antes do hash e
       usar a mesma mensagem para "nome não existe" e "PIN errado".
-- [ ] 5. `pela_turma` depende de `turma.porta()`: ao fechar a turma, um pedido pela rede vira administrador. Usar `turma.PORTAS`.
-- [ ] 6. Simulado: PATCH simultâneos apagam respostas (sem transação); entrega dupla duplica o histórico.
-- [ ] 7. Rascunho: salvar antes de carregar sobrescreve o rascunho do servidor; carregamento que falhou nunca é refeito.
-- [ ] 8. Simulado: enquanto a próxima questão carrega, a resposta vai para a questão errada; a pré-carga que falhou fica presa no cache.
-- [ ] Testes desta parte: gabarito nunca sai antes da resposta; rotas de administração exigem o organizador;
+- [x] 5. `pela_turma` depende de `turma.porta()`: ao fechar a turma, um pedido pela rede vira administrador. Usar `turma.PORTAS`.
+- [x] 6. Simulado: PATCH simultâneos apagam respostas (sem transação); entrega dupla duplica o histórico.
+- [x] 7. Rascunho: salvar antes de carregar sobrescreve o rascunho do servidor; carregamento que falhou nunca é refeito.
+- [x] 8. Simulado: enquanto a próxima questão carrega, a resposta vai para a questão errada; a pré-carga que falhou fica presa no cache.
+- [x] 8b. (achado ao testar) Navegação rápida: a tela anterior terminava de carregar por cima da nova. Descartar
+      respostas da API que chegam depois de outra navegação.
+- [x] Testes desta parte: gabarito nunca sai antes da resposta; rotas de administração exigem o organizador;
       isolamento entre alunos; entrega do simulado; Host e Origin.
 
 **Parte 2: robustez**
@@ -99,7 +101,7 @@ Revisão com os agentes do agent-skills (code-reviewer, security-auditor, test-e
       `dados.zip`, `pip --require-hashes`; avaliar assinatura Ed25519 do `.sha256`.
 - [ ] Código duplicado de certa/errada e da grade (`renderizarQuestao`, `resultadoSimulado`, `revisarQuestaoSimulado`).
 - [ ] `ip_local` com VPN/Hyper-V: mostrar todos os IPs privados.
-- [ ] `markdown.js`: só imagens locais (`/imagens/`), nada remoto.
+- [x] `markdown.js`: só imagens locais (`/imagens/`), nada remoto (feito na Parte 1).
 
 ## Pré-requisitos do modo turma (revisão de código, 2026-11-08)
 - ✅ **Uma conexão SQLite por requisição** (v0.4.4): dependência `banco()` em `app/main.py`, `INSERT ... RETURNING id`

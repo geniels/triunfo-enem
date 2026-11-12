@@ -24,14 +24,19 @@ function esc(s) {
 // Modo turma (ADR 0022): "local" é o próprio PC (sem login); "turma" é quem entra pela rede com nome e PIN.
 let eu = { modo: "local", aluno: null };
 class PrecisaEntrar extends Error {}
+// Cada navegação ganha um número. Resposta que chega depois de outra navegação é descartada (a promessa nunca
+// termina): sem isso, uma tela lenta terminava de carregar por cima da tela nova.
+let geracao = 0;
 
 async function api(caminho, opcoes) {
+  const minha = geracao;
   const r = await fetch(caminho, opcoes);
   if (r.status === 401 && eu.modo === "turma") {
     eu.aluno = null; // PIN trocado pelo organizador ou participante removido
     telaEntrar();
     throw new PrecisaEntrar();
   }
+  if (minha !== geracao) return new Promise(() => {});
   if (!r.ok) {
     const d = await r.json().catch(() => ({}));
     throw new Error(typeof d.detail === "string" ? d.detail : `Erro ${r.status} em ${caminho}`);
@@ -75,6 +80,7 @@ let sessao = null; // sessão de prática ativa
 let limparTela = null; // função de limpeza (ex.: parar cronômetro)
 
 async function navegar() {
+  geracao++;
   limparTela?.();
   limparTela = null;
   if (eu.modo === "turma") {
@@ -339,6 +345,10 @@ function corpoQuestao(q) {
 }
 
 function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }) {
+  // Na sessão de prática a rota não muda entre questões: sem isto, o teclado da questão anterior continuaria
+  // ligado e gravaria respostas que o aluno não deu.
+  limparTela?.();
+  limparTela = null;
   const inicio = Date.now();
   let escolhida = null;
   let respondida = false;
@@ -817,7 +827,7 @@ async function abrirSimulado(id) {
 
 function fazerSimulado(s) {
   const cache = {}; // questões já baixadas
-  const buscar = (qid) => (cache[qid] ??= api(`/api/questao/${qid}`));
+  const buscar = (qid) => (cache[qid] ??= api(`/api/questao/${qid}`).catch((e) => { delete cache[qid]; throw e; }));
   const marcadas = new Set(s.marcadas);
   let atual = Math.max(0, s.questoes.findIndex((q) => !s.respostas[q])); // primeira sem resposta
   const inicio = Date.now() - s.tempo_seg * 1000;
@@ -865,11 +875,23 @@ function fazerSimulado(s) {
   }
 
   let desligarRascunho = null;
+  let pronta = false; // a questão de "atual" está na tela: só então dá para responder ou marcar
   async function mostrar(i) {
     atual = Math.min(Math.max(i, 0), s.questoes.length - 1);
     const qid = s.questoes[atual];
+    pronta = false;
     atualizarGrade();
-    const q = await buscar(qid);
+    let q;
+    try {
+      q = await buscar(qid);
+    } catch (e) {
+      if (e instanceof PrecisaEntrar || s.questoes[atual] !== qid) return;
+      $("#s-questao").innerHTML = `<div class="retorno nao"><b>Não foi possível carregar a questão.</b>
+        Verifique a conexão com o computador do TRIunfo.</div>
+        <div class="acoes"><button class="botao" id="s-tentar">Tentar de novo</button></div>`;
+      $("#s-tentar").onclick = () => mostrar(atual);
+      return;
+    }
     if (s.questoes[atual] !== qid) return; // o aluno já mudou de questão enquanto carregava
     $("#s-questao").innerHTML = `
       <p class="placar"><b>Questão ${q.indice}</b> · ${esc(q.area_nome.replace(" e suas Tecnologias", ""))}</p>
@@ -889,10 +911,12 @@ function fazerSimulado(s) {
     $("#s-proxima").onclick = () => mostrar(atual + 1);
     $("#s-marcar").onclick = alternarMarca;
     if (q.alternativas.length < 5) $("#s-questao").insertAdjacentHTML("beforeend", '<p class="sub">Esta questão veio da fonte com menos de 5 alternativas.</p>');
-    buscar(s.questoes[atual + 1] ?? qid); // adianta a próxima
+    pronta = true;
+    buscar(s.questoes[atual + 1] ?? qid).catch(() => {}); // adianta a próxima
   }
 
   function responder(letra) {
+    if (!pronta) return; // a tela ainda mostra a questão anterior
     const qid = s.questoes[atual];
     const nova = s.respostas[qid] === letra ? null : letra; // tocar de novo apaga
     if (nova) s.respostas[qid] = nova;
@@ -903,6 +927,7 @@ function fazerSimulado(s) {
   }
 
   function alternarMarca() {
+    if (!pronta) return;
     const qid = s.questoes[atual];
     marcadas.has(qid) ? marcadas.delete(qid) : marcadas.add(qid);
     salvar({ marcadas: [...marcadas] });
@@ -924,8 +949,18 @@ function fazerSimulado(s) {
         : "Tudo respondido. Clique de novo para entregar.";
       return;
     }
-    await patch(`/api/simulados/${s.id}`, { tempo_seg: decorrido() });
-    await post(`/api/simulados/${s.id}/entregar`, {});
+    entregar.disabled = true; // duplo clique não entrega duas vezes
+    entregar.textContent = "Entregando…";
+    try {
+      await patch(`/api/simulados/${s.id}`, { tempo_seg: decorrido() });
+      await post(`/api/simulados/${s.id}/entregar`, {});
+    } catch (e) {
+      if (e instanceof PrecisaEntrar) return; // a tela de entrada já está aberta
+      entregar.disabled = false;
+      entregar.textContent = "Confirmar entrega";
+      $("#s-aviso").textContent = `Não foi possível entregar agora: ${e.message} Tente de novo.`;
+      return;
+    }
     s.entregue = 1; // nada mais a salvar ao sair da tela
     navegar();
   };
