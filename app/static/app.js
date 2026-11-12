@@ -351,6 +351,31 @@ function corpoQuestao(q) {
         : ""}`;
 }
 
+// Certa e errada nas alternativas (prática e revisão do simulado). Selo em texto além da cor: quem é daltônico
+// também precisa distinguir.
+function marcarCorrecao(lista, resposta, gabarito) {
+  const selo = (texto) => `<span class="selo">${texto}</span>`;
+  lista.querySelectorAll("button").forEach((b) => {
+    b.disabled = true;
+    if (b.dataset.letra === gabarito) {
+      b.classList.add("certa");
+      b.insertAdjacentHTML("beforeend", selo(resposta === gabarito ? "Correta · sua resposta" : "Correta"));
+    } else if (b.dataset.letra === resposta) {
+      b.classList.add("errada");
+      b.insertAdjacentHTML("beforeend", selo("Sua resposta"));
+    }
+  });
+}
+
+// Quadradinho de uma questão do simulado entregue (resultado e revisão), com o mesmo rótulo para leitor de tela.
+function quadradoQuestao(sid, it, atualId) {
+  const estado = !it.resposta ? "" : it.resposta === it.gabarito ? "certa" : "errada";
+  const rotulo = !it.resposta ? "em branco" : estado === "certa" ? "certa" : `errada, marcou ${esc(it.resposta)}`;
+  const aqui = it.id === atualId;
+  return `<a class="q ${estado}${aqui ? " atual" : ""}" href="#simulado/${sid}/${it.id}" ${aqui ? 'aria-current="page"' : ""}
+    aria-label="Questão ${it.indice}: ${rotulo}, gabarito ${esc(it.gabarito)}">${it.indice}</a>`;
+}
+
 function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }) {
   // Na sessão de prática a rota não muda entre questões: sem isto, o teclado da questão anterior continuaria
   // ligado e gravaria respostas que o aluno não deu.
@@ -414,18 +439,7 @@ function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }
     clearInterval(timer);
     aoResponder?.(r.correta);
 
-    // Selo em texto além da cor: quem é daltônico também precisa distinguir certa/errada.
-    const selo = (texto) => `<span class="selo">${texto}</span>`;
-    lista.querySelectorAll("button").forEach((b) => {
-      b.disabled = true;
-      if (b.dataset.letra === r.gabarito) {
-        b.classList.add("certa");
-        b.insertAdjacentHTML("beforeend", selo(r.correta ? "Correta · sua resposta" : "Correta"));
-      } else if (b.dataset.letra === escolhida) {
-        b.classList.add("errada");
-        b.insertAdjacentHTML("beforeend", selo("Sua resposta"));
-      }
-    });
+    marcarCorrecao(lista, escolhida, r.gabarito);
 
     const retorno = $("#retorno");
     if (r.correta) {
@@ -1055,13 +1069,7 @@ function resultadoSimulado(s) {
       <h2>Questão por questão</h2>
       <p class="legenda"><span class="q certa">1</span> certa <span class="q errada">2</span> errada <span class="q">3</span> em branco ·
         toque numa questão para revê-la</p>
-      <div class="grade-cartao">${itens
-        .map((it, i) => {
-          const estado = !it.resposta ? "" : it.resposta === it.gabarito ? "certa" : "errada";
-          const rotulo = !it.resposta ? "em branco" : estado === "certa" ? "certa" : `errada, marcou ${it.resposta}`;
-          return `<a class="q ${estado}" href="#simulado/${s.id}/${it.id}" aria-label="Questão ${it.indice}: ${rotulo}, gabarito ${esc(it.gabarito)}">${it.indice}</a>`;
-        })
-        .join("")}</div>
+      <div class="grade-cartao">${itens.map((it) => quadradoQuestao(s.id, it)).join("")}</div>
       <div class="acoes"><a class="botao" href="#simulado">Voltar aos simulados</a></div>
     </section>`;
 }
@@ -1086,13 +1094,7 @@ async function revisarQuestaoSimulado(sid, qid) {
   const situacao = !it.resposta ? "Você deixou em branco" : it.resposta === it.gabarito ? "Você acertou" : `Você marcou ${esc(it.resposta)}`;
   // Mesmo layout do simulado (questão + cartão-resposta ao lado): a questão fica com a mesma largura e o
   // rascunho, guardado em coordenadas relativas à largura, cai exatamente onde a pessoa riscou.
-  const grade = itens.map((x) => {
-    const estado = !x.resposta ? "" : x.resposta === x.gabarito ? "certa" : "errada";
-    const rotulo = !x.resposta ? "em branco" : estado === "certa" ? "certa" : `errada, marcou ${x.resposta}`;
-    const aqui = x.id === qid;
-    return `<a class="q ${estado}${aqui ? " atual" : ""}" href="#simulado/${sid}/${x.id}" ${aqui ? 'aria-current="page"' : ""}
-      aria-label="Questão ${x.indice}: ${rotulo}">${x.indice}</a>`;
-  }).join("");
+  const grade = itens.map((x) => quadradoQuestao(sid, x, qid)).join("");
   conteudo.innerHTML = `
     <div class="barra-questao">
       <span class="etiqueta area-mat">Revisão</span>
@@ -1117,18 +1119,8 @@ async function revisarQuestaoSimulado(sid, qid) {
     </div>
     <p class="atalhos">Atalhos: <kbd>←</kbd> e <kbd>→</kbd> passam as questões.</p>`;
 
-  const selo = (texto) => `<span class="selo">${texto}</span>`;
   const lista = $("#alternativas");
-  lista.querySelectorAll("button").forEach((b) => {
-    b.disabled = true;
-    if (b.dataset.letra === it.gabarito) {
-      b.classList.add("certa");
-      b.insertAdjacentHTML("beforeend", selo(it.resposta === it.gabarito ? "Correta · sua resposta" : "Correta"));
-    } else if (b.dataset.letra === it.resposta) {
-      b.classList.add("errada");
-      b.insertAdjacentHTML("beforeend", selo("Sua resposta"));
-    }
-  });
+  marcarCorrecao(lista, it.resposta, it.gabarito);
   const ir = (outro) => outro && (location.hash = `#simulado/${sid}/${outro.id}`);
   $("#r-anterior").onclick = () => ir(anterior);
   $("#r-proxima").onclick = () => ir(seguinte);
@@ -1310,7 +1302,8 @@ async function telaConfig() {
     <section class="cartao">
       <h2>Sua conta</h2>
       <p>Você entrou como <b>${esc(eu.aluno.nome)}</b>. Este aparelho fica lembrado.</p>
-      <p class="sub">Num computador que outras pessoas usam, saia ao terminar.</p>
+      <p class="sub">Num computador que outras pessoas usam, saia ao terminar. Sair desconecta você em todos os
+        aparelhos; para voltar, é só entrar com seu nome e PIN.</p>
       <div class="acoes"><button class="botao secundario" id="sair">Sair</button></div>
     </section>` : `
     <section class="cartao" aria-labelledby="turma-titulo">
@@ -1460,6 +1453,8 @@ function desenharTurma(t, aviso = "") {
       <div class="retorno destaque-aviso">
         <b>Acesso pela rede aberto.</b> No outro aparelho, conectado na mesma rede Wi-Fi, digite no navegador:
         <p class="endereco">${esc(t.endereco)}</p>
+        ${t.outros_enderecos?.length ? `<p>Se não abrir, tente: ${t.outros_enderecos.map((e) => `<b>${esc(e)}</b>`).join(" ou ")}
+          (este computador está em mais de uma rede, por exemplo com VPN).</p>` : ""}
         <small>Fica aberto até você fechar aqui ou fechar o TRIunfo. O endereço com 127.0.0.1 ou localhost só funciona
           neste computador.</small>
       </div>

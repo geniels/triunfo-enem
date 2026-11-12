@@ -1,6 +1,6 @@
 # 0021. Instalador gerado no GitHub Actions, pronto para assinatura
 
-- **Status:** Aceita
+- **Status:** Aceita. Complementada pela ADR 0027 (ações fixadas por SHA, permissão mínima, hash de tudo)
 - **Data:** 2026-11-08
 
 ## Contexto

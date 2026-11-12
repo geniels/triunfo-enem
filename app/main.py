@@ -823,14 +823,18 @@ class Acesso(BaseModel):
 
 
 def _guardar_aparelho(resposta: Response, con: sqlite3.Connection, aluno: int) -> None:
-    resposta.set_cookie(turma.COOKIE, turma.cookie_para(con, aluno), max_age=365 * 86400, httponly=True, samesite="strict")
+    resposta.set_cookie(turma.COOKIE, turma.cookie_para(con, aluno), max_age=turma.VALIDADE_SEG, httponly=True,
+                        samesite="strict")
 
 
 @app.get("/api/turma/eu")
-def quem_sou(request: Request, con: Con):
+def quem_sou(request: Request, resposta: Response, con: Con):
     if not pela_turma(request):
         return {"modo": "local", "aluno": None}
-    aluno = turma.aluno_do_cookie(con, request.cookies.get(turma.COOKIE))
+    lido = turma.ler_cookie(con, request.cookies.get(turma.COOKIE))
+    aluno = lido[0] if lido else None
+    if lido and time.time() - lido[1] > turma.RENOVAR_SEG:  # quem usa não precisa entrar de novo a cada 90 dias
+        _guardar_aparelho(resposta, con, aluno)
     nome = con.execute("SELECT nome FROM alunos WHERE id = ?", (aluno,)).fetchone() if aluno else None
     return {"modo": "turma", "aluno": {"id": aluno, "nome": nome[0]} if nome else None}
 
@@ -871,7 +875,10 @@ def cadastrar_na_turma(a: Acesso, request: Request, resposta: Response, con: Con
 
 
 @app.post("/api/turma/sair")
-def sair_da_turma(resposta: Response):
+def sair_da_turma(request: Request, resposta: Response, con: Con):
+    aluno = turma.aluno_do_cookie(con, request.cookies.get(turma.COOKIE))
+    if aluno is not None:
+        turma.encerrar_sessao(con, aluno)  # o cookie deixa de valer no servidor, não só neste navegador
     resposta.delete_cookie(turma.COOKIE)
     return {"ok": True}
 
@@ -884,7 +891,9 @@ def ver_turma(con: Con):
            FROM alunos a LEFT JOIN respostas r ON r.aluno_id = a.id
            WHERE a.id != ? GROUP BY a.id ORDER BY a.nome COLLATE NOCASE""", (turma.ORGANIZADOR,))]
     dono = con.execute("SELECT nome, pin_hash IS NOT NULL FROM alunos WHERE id = ?", (turma.ORGANIZADOR,)).fetchone()
-    return {"aberta": turma.porta() is not None, "endereco": turma.endereco(), "participantes": participantes,
+    enderecos = turma.enderecos()
+    return {"aberta": turma.porta() is not None, "endereco": enderecos[0] if enderecos else None,
+            "outros_enderecos": enderecos[1:], "participantes": participantes,
             "meu_acesso": {"nome": dono[0], "definido": bool(dono[1])}}
 
 
@@ -910,7 +919,7 @@ def abrir_turma(con: Con):
         turma.abrir(app)
     except OSError:
         raise HTTPException(503, "Não foi possível abrir a turma: as portas de rede estão ocupadas. Reinicie o computador e tente de novo.")
-    if not turma.endereco():
+    if not turma.enderecos():
         turma.fechar()
         raise HTTPException(503, "Este computador não está conectado a nenhuma rede. Conecte-se ao Wi-Fi e tente de novo.")
     return ver_turma(con)

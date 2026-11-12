@@ -34,6 +34,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0024](0024-lembrete-de-versao-nova.md) | Lembrete de versão nova na tela inicial | Aceita |
 | [0025](0025-meus-outros-aparelhos.md) | O dono do PC usa o mesmo progresso no tablet ou celular | Aceita |
 | [0026](0026-protecao-contra-ataques-da-web.md) | Proteção contra ataques vindos de sites da internet | Aceita |
+| [0027](0027-cadeia-de-build.md) | Cadeia de build protegida: ações fixadas, menor permissão e hash de tudo | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

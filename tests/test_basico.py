@@ -212,6 +212,18 @@ class TestAreaOficial(unittest.TestCase):
 
 
 
+class TestDependencias(unittest.TestCase):
+    def test_lista_travada_acompanha_o_requirements(self):
+        """O instalador usa instalador/requirements-lock.txt (com hash, ADR 0027): mudar o requirements.txt sem
+        regenerar a lista faria o instalador levar outra versão."""
+        raiz = Path(__file__).resolve().parent.parent
+        travadas = {l.split(" ")[0] for l in (raiz / "instalador/requirements-lock.txt").read_text(encoding="utf-8").splitlines()
+                    if l and not l.startswith("#")}
+        for linha in (raiz / "requirements.txt").read_text(encoding="utf-8").splitlines():
+            if linha.strip() and not linha.startswith("#"):
+                self.assertIn(linha.strip().lower(), travadas)
+
+
 class TestImportador(unittest.TestCase):
     def test_reescrever_troca_so_a_url_inteira_da_imagem(self):
         mapa = {"https://x/a.png": "/imagens/a.png", "https://x/a.png2": "/imagens/b.png"}

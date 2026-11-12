@@ -23,6 +23,10 @@ from app.versao import VERSAO  # noqa: E402
 
 PY_VERSAO = f"{sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}"  # a mesma do .venv
 PY_URL = f"https://www.python.org/ftp/python/{PY_VERSAO}/python-{PY_VERSAO}-embed-amd64.zip"
+# SHA-256 conhecido do Python embutido (ADR 0027). O de 3.12.10 foi conferido pelo MD5 publicado no python.org.
+# Versão nova do Python: baixar, conferir com o python.org e acrescentar aqui.
+PY_SHA256 = {"3.12.10": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3"}
+LOCK = RAIZ / "instalador" / "requirements-lock.txt"  # dependências com versão e hash travados
 BUILD = RAIZ / "build"
 ALVO = BUILD / "TRIunfo"
 DIST = RAIZ / "dist"
@@ -38,6 +42,12 @@ def python_embutido() -> None:
     if not cache.exists():
         etapa(f"Baixando o Python {PY_VERSAO} embutido (python.org)")
         urllib.request.urlretrieve(PY_URL, cache)
+    esperado = PY_SHA256.get(PY_VERSAO)
+    if not esperado:
+        sys.exit(f"Sem SHA-256 conhecido para o Python {PY_VERSAO}: confira o arquivo e acrescente em PY_SHA256.")
+    if hashlib.sha256(cache.read_bytes()).hexdigest() != esperado:
+        cache.unlink()
+        sys.exit(f"O Python embutido baixado não confere com o SHA-256 conhecido ({PY_URL}). Nada foi montado.")
     destino = ALVO / "python"
     with zipfile.ZipFile(cache) as z:
         z.extractall(destino)
@@ -48,8 +58,9 @@ def python_embutido() -> None:
 
 def dependencias() -> None:
     etapa("Instalando as dependências no Python embutido")
-    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--no-compile", "-r", str(RAIZ / "requirements.txt"),
-                    "--target", str(ALVO / "python" / "Lib" / "site-packages")], check=True)
+    # --require-hashes: todas as dependências, inclusive as indiretas, com versão e hash travados (ADR 0027).
+    subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--no-compile", "--require-hashes", "--only-binary=:all:",
+                    "-r", str(LOCK), "--target", str(ALVO / "python" / "Lib" / "site-packages")], check=True)
 
 
 def precompilar() -> None:

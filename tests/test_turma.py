@@ -39,8 +39,24 @@ class TestTurma(unittest.TestCase):
         valor = turma.cookie_para(self.con, self.ana)
         self.assertEqual(turma.aluno_do_cookie(self.con, valor), self.ana)
         self.assertIsNone(turma.aluno_do_cookie(self.con, valor[:-1] + "0" if valor[-1] != "0" else valor[:-1] + "1"))
-        self.assertIsNone(turma.aluno_do_cookie(self.con, "1." + valor.split(".")[1]))  # outro id
+        self.assertIsNone(turma.aluno_do_cookie(self.con, "1." + valor.split(".", 1)[1]))  # outro id
         self.assertIsNone(turma.aluno_do_cookie(self.con, "lixo"))
+        self.assertIsNone(turma.aluno_do_cookie(self.con, valor.split(".")[0] + "." + valor.split(".", 1)[1]
+                                                .replace(valor.split(".")[1], str(int(valor.split(".")[1]) + 1), 1)))  # outra data
+
+    def test_cookie_vence(self):
+        import time
+        velho = turma.cookie_para(self.con, self.ana, agora=time.time() - turma.VALIDADE_SEG - 60)
+        self.assertIsNone(turma.aluno_do_cookie(self.con, velho))
+        quase = turma.cookie_para(self.con, self.ana, agora=time.time() - turma.VALIDADE_SEG + 3600)
+        self.assertEqual(turma.aluno_do_cookie(self.con, quase), self.ana)
+
+    def test_sair_invalida_o_cookie_no_servidor(self):
+        """Antes, "Sair" só apagava o cookie daquele navegador: uma cópia continuava entrando."""
+        copia = turma.cookie_para(self.con, self.ana)
+        turma.encerrar_sessao(self.con, self.ana)
+        self.assertIsNone(turma.aluno_do_cookie(self.con, copia))
+        self.assertEqual(turma.aluno_do_cookie(self.con, turma.cookie_para(self.con, self.ana)), self.ana)
 
     def test_pin_novo_invalida_aparelho_lembrado(self):
         valor = turma.cookie_para(self.con, self.ana)
@@ -96,6 +112,15 @@ class TestTurma(unittest.TestCase):
 
     def test_mesma_resposta_para_nome_inexistente_e_pin_errado(self):
         self.assertEqual(turma.entrar(self.con, "Ninguém", "1234")[1], turma.entrar(self.con, "Ana", "0000")[1])
+
+
+class TestEnderecos(unittest.TestCase):
+    def test_lista_so_ips_privados_sem_repetir(self):
+        from unittest import mock
+        nomes = ("pc", [], ["192.168.1.7", "127.0.0.1", "169.254.10.2", "172.20.5.1", "8.8.4.4", "10.8.0.3", "192.168.1.7"])
+        with (mock.patch.object(turma.socket, "socket", side_effect=OSError),
+              mock.patch.object(turma.socket, "gethostbyname_ex", return_value=nomes)):
+            self.assertEqual(turma.ips_locais(), ["192.168.1.7", "172.20.5.1", "10.8.0.3"])
 
 if __name__ == "__main__":
     unittest.main()

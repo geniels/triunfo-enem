@@ -4,6 +4,9 @@
 - **Data:** 2026-11-10
 - **Altera:** ADR 0010 (a edição "Escola" passa a ser o **modo turma**)
 - **Alterada por:** ADR 0025 (o dono do PC pode entrar pela rede com o próprio nome e PIN)
+- **Atualização (2026-11-12, v0.5.6):** o cookie vale 90 dias, renovado ao usar, e traz a data de emissão e um número
+  de sessão na assinatura. "Sair" soma 1 à sessão no servidor, então cópias do cookie param de valer, em todos os
+  aparelhos daquela pessoa.
 
 ## Contexto
 A Fase 4 previa um "modo escola". O mesmo recurso serve a uma escola, a um cursinho ou a um grupo de amigos que

@@ -11,6 +11,7 @@ from __future__ import annotations
 import functools
 import hashlib
 import hmac
+import ipaddress
 import secrets
 import socket
 import sqlite3
@@ -55,26 +56,46 @@ def segredo(con: sqlite3.Connection) -> bytes:
     return segredo(con)
 
 
-def _assinatura(con: sqlite3.Connection, aluno_id: int, pin_hash: str) -> str:
-    # Entra o hash do PIN: quando o organizador gera um PIN novo, os aparelhos lembrados saem sozinhos.
-    return hmac.new(segredo(con), f"{aluno_id}:{pin_hash}".encode(), hashlib.sha256).hexdigest()
+VALIDADE_SEG = 90 * 86400  # aparelho lembrado; renovado ao usar (RENOVAR_SEG)
+RENOVAR_SEG = 7 * 86400
 
 
-def cookie_para(con: sqlite3.Connection, aluno_id: int) -> str:
-    pin_hash = con.execute("SELECT pin_hash FROM alunos WHERE id = ?", (aluno_id,)).fetchone()[0]
-    return f"{aluno_id}.{_assinatura(con, aluno_id, pin_hash)}"
+def _assinatura(con: sqlite3.Connection, aluno_id: int, pin_hash: str, sessao: int, emitido: int) -> str:
+    # Entram o hash do PIN (PIN novo derruba os aparelhos), a sessão ("Sair" derruba) e a data de emissão (validade).
+    texto = f"{aluno_id}:{pin_hash}:{sessao}:{emitido}"
+    return hmac.new(segredo(con), texto.encode(), hashlib.sha256).hexdigest()
+
+
+def cookie_para(con: sqlite3.Connection, aluno_id: int, agora: float | None = None) -> str:
+    pin_hash, sessao = con.execute("SELECT pin_hash, sessao FROM alunos WHERE id = ?", (aluno_id,)).fetchone()
+    emitido = int(agora if agora is not None else time.time())
+    return f"{aluno_id}.{emitido}.{_assinatura(con, aluno_id, pin_hash, sessao, emitido)}"
+
+
+def ler_cookie(con: sqlite3.Connection, valor: str | None) -> tuple[int, int] | None:
+    """(aluno, emitido) se o cookie for válido e estiver no prazo."""
+    try:
+        texto_id, texto_emitido, assinatura = (valor or "").split(".", 2)
+        aluno_id, emitido = int(texto_id), int(texto_emitido)
+    except ValueError:
+        return None
+    if not 0 <= time.time() - emitido <= VALIDADE_SEG:
+        return None
+    r = con.execute("SELECT pin_hash, sessao FROM alunos WHERE id = ?", (aluno_id,)).fetchone()
+    if not r or not r[0] or not hmac.compare_digest(_assinatura(con, aluno_id, r[0], r[1], emitido), assinatura):
+        return None
+    return aluno_id, emitido
 
 
 def aluno_do_cookie(con: sqlite3.Connection, valor: str | None) -> int | None:
-    try:
-        texto_id, assinatura = (valor or "").split(".", 1)
-        aluno_id = int(texto_id)
-    except ValueError:
-        return None
-    r = con.execute("SELECT pin_hash FROM alunos WHERE id = ?", (aluno_id,)).fetchone()
-    if not r or not r[0] or not hmac.compare_digest(_assinatura(con, aluno_id, r[0]), assinatura):
-        return None
-    return aluno_id
+    lido = ler_cookie(con, valor)
+    return lido[0] if lido else None
+
+
+def encerrar_sessao(con: sqlite3.Connection, aluno_id: int) -> None:
+    """"Sair": os cookies já emitidos para essa pessoa param de valer (inclusive um copiado de outro aparelho)."""
+    with con:
+        con.execute("UPDATE alunos SET sessao = sessao + 1 WHERE id = ?", (aluno_id,))
 
 
 NAO_CONFERE = ("Nome ou PIN não conferem. Confira o que você digitou; se esqueceu o PIN, peça um novo a quem organiza "
@@ -149,21 +170,30 @@ def entrar(con: sqlite3.Connection, nome: str, pin: str) -> tuple[int | None, st
 
 # ---------------------------- Servidor da rede ----------------------------
 
-def ip_local() -> str | None:
-    """IP deste PC na rede local. Conectar UDP não envia nada: só escolhe a interface de saída."""
-    for destino in ("192.168.0.1", "10.0.0.1", "8.8.8.8"):
+def ips_locais() -> list[str]:
+    """IPs privados deste PC (192.168.*, 10.*, 172.16-31.*), o da rota de saída primeiro. Com VPN, Hyper-V ou WSL,
+    o PC tem vários; mostrar todos deixa a pessoa tentar outro se o primeiro não abrir no tablet."""
+    candidatos = []
+    for destino in ("192.168.0.1", "10.0.0.1", "8.8.8.8"):  # conectar UDP não envia nada: só escolhe a interface
         try:
             with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
                 s.connect((destino, 80))
-                ip = s.getsockname()[0]
-                if not ip.startswith("127."):
-                    return ip
+                candidatos.append(s.getsockname()[0])
         except OSError:
             continue
     try:
-        return next(ip for ip in socket.gethostbyname_ex(socket.gethostname())[2] if not ip.startswith("127."))
-    except (OSError, StopIteration):
-        return None
+        candidatos += socket.gethostbyname_ex(socket.gethostname())[2]
+    except OSError:
+        pass
+    privados = []
+    for ip in candidatos:
+        try:
+            endereco = ipaddress.IPv4Address(ip)
+        except ValueError:
+            continue
+        if endereco.is_private and not (endereco.is_loopback or endereco.is_link_local) and ip not in privados:
+            privados.append(ip)
+    return privados
 
 
 def _livre(porta: int) -> bool:
@@ -180,9 +210,9 @@ def porta() -> int | None:
     return _porta if _servidor and not _servidor.should_exit else None
 
 
-def endereco() -> str | None:
-    ip = ip_local()
-    return f"http://{ip}:{_porta}" if ip and porta() else None
+def enderecos() -> list[str]:
+    """Endereços para os outros aparelhos digitarem; o primeiro é o mais provável."""
+    return [f"http://{ip}:{_porta}" for ip in ips_locais()] if porta() else []
 
 
 def abrir(app) -> int:

@@ -24,7 +24,7 @@ O rascunho fica salvo no `aluno.db` e volta na prática, no caderno de erros e n
 Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 **Lembrete de versão nova** na tela inicial, com consulta diária desligável (ADR 0024).
 **Tablet do próprio estudante** com o mesmo progresso do PC (ADR 0025). Versão **0.5.2** (lembrete + tablet).
-**Próximo passo:** correções da revisão geral (seção abaixo), Parte 4 (1 a 3 prontas); depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
+**Revisão geral concluída** (Partes 1 a 4, versões 0.5.3 a 0.5.6). **Próximo passo:** painel do organizador por área (desempenho de cada pessoa). A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -100,12 +100,12 @@ Revisão com os agentes do agent-skills (code-reviewer, security-auditor, test-e
 - [x] (achado ao testar) `getCoalescedEvents()` pode vir vazio: o rascunho perdia o movimento e desenhava só o ponto inicial.
 - Mantido: `/api/estatisticas` e `/api/plano` repetem uma consulta por área; juntar acoplaria duas telas por um ganho pequeno.
 
-**Parte 4: menores**
-- [ ] Cookie da turma com validade e "Sair" que invalida a sessão no servidor.
-- [ ] Cadeia de build: actions fixadas por SHA, `contents: write` só no passo de anexar, hash do zip do Python e do
-      `dados.zip`, `pip --require-hashes`; avaliar assinatura Ed25519 do `.sha256`.
-- [ ] Código duplicado de certa/errada e da grade (`renderizarQuestao`, `resultadoSimulado`, `revisarQuestaoSimulado`).
-- [ ] `ip_local` com VPN/Hyper-V: mostrar todos os IPs privados.
+**Parte 4: menores** ✅ (versão 0.5.6, ADR 0027)
+- [x] Cookie da turma com validade e "Sair" que invalida a sessão no servidor.
+- [x] Cadeia de build: actions fixadas por SHA, `contents: write` só no passo de anexar, hash do zip do Python e do
+      `dados.zip`, `pip --require-hashes`; assinatura Ed25519 do `.sha256` avaliada e adiada (ADR 0027).
+- [x] Código duplicado de certa/errada e da grade (`renderizarQuestao`, `resultadoSimulado`, `revisarQuestaoSimulado`).
+- [x] `ip_local` com VPN/Hyper-V: mostrar todos os IPs privados.
 - [x] `markdown.js`: só imagens locais (`/imagens/`), nada remoto (feito na Parte 1).
 
 ## Pré-requisitos do modo turma (revisão de código, 2026-11-08)

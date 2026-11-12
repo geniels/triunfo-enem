@@ -177,6 +177,7 @@ COLUNAS_NOVAS = {
         "tentativas": "INTEGER NOT NULL DEFAULT 0",           # PINs errados seguidos
         "bloqueado_ate": "REAL",                              # time.time() até quando espera
         "criado_em": "TEXT",
+        "sessao": "INTEGER NOT NULL DEFAULT 0",               # "Sair" soma 1: os cookies antigos param de valer
     },
     # Resultado do simulado (acertos, nota TRI), calculado uma vez na entrega: as provas oficiais não mudam.
     "simulados": {"resultado": "TEXT"},
