@@ -1446,6 +1446,7 @@ function desenharTurma(t, aviso = "") {
       </th>
       <td>${p.respondidas}</td>
       <td>${p.respondidas ? Math.round((100 * p.acertos) / p.respondidas) + "%" : "—"}</td>
+      ${Object.values(p.areas).map(([resp, ac]) => `<td>${resp ? `${Math.round((100 * ac) / resp)}% <small>(${resp})</small>` : "—"}</td>`).join("")}
       <td>${p.ultima_atividade ? dataCurta(p.ultima_atividade) : "—"}</td>
     </tr>`).join("");
   corpo.innerHTML = `
@@ -1482,6 +1483,7 @@ function desenharTurma(t, aviso = "") {
       <div class="tabela"><table>
         <caption>Participantes (${t.participantes.length})</caption>
         <thead><tr><th scope="col">Nome</th><th scope="col">Questões</th><th scope="col">Acertos</th>
+          ${Object.values(NOME_BLOCO).slice(0, 4).map((n) => `<th scope="col">${n}</th>`).join("")}
           <th scope="col">Última vez</th></tr></thead>
         <tbody>${linhas}</tbody>
       </table></div>

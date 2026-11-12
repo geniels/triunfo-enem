@@ -890,6 +890,14 @@ def ver_turma(con: Con):
                   COUNT(r.id) AS respondidas, SUM(r.correta) AS acertos, MAX(r.criado_em) AS ultima_atividade
            FROM alunos a LEFT JOIN respostas r ON r.aluno_id = a.id
            WHERE a.id != ? GROUP BY a.id ORDER BY a.nome COLLATE NOCASE""", (turma.ORGANIZADOR,))]
+    por_area = {}  # (aluno, área) -> [respondidas, acertos]: o organizador vê onde cada pessoa precisa de ajuda
+    for aid, area, resp, ac in con.execute(
+            """SELECT r.aluno_id, q.area, COUNT(*), SUM(r.correta) FROM respostas r
+               JOIN questoes q ON q.id = r.questao_id WHERE r.aluno_id != ? GROUP BY r.aluno_id, q.area""",
+            (turma.ORGANIZADOR,)):
+        por_area[aid, area] = [resp, ac]
+    for p in participantes:
+        p["areas"] = {area: por_area.get((p["id"], area), [0, 0]) for area in AREAS}
     dono = con.execute("SELECT nome, pin_hash IS NOT NULL FROM alunos WHERE id = ?", (turma.ORGANIZADOR,)).fetchone()
     enderecos = turma.enderecos()
     return {"aberta": turma.porta() is not None, "endereco": enderecos[0] if enderecos else None,

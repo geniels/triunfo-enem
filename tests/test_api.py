@@ -120,6 +120,14 @@ class TestApi(unittest.TestCase):
         self.assertEqual(status(main.ler_rascunho, self.con, 2, chave=f"s{sid}-{QS[0]}"), 404)
         self.assertEqual(main.listar_simulados(self.con, 2), [])
 
+    def test_painel_da_turma_por_area(self):
+        main.responder(self.con, 2, main.Resposta(questao_id=QS[0], alternativa="B"))
+        main.responder(self.con, 2, main.Resposta(questao_id=QS[1], alternativa="A"))
+        main.responder(self.con, 1, main.Resposta(questao_id=QS[2], alternativa="D"))  # do organizador: fora do painel
+        ana, = main.ver_turma(self.con)["participantes"]
+        self.assertEqual(ana["areas"]["ciencias-natureza"], [2, 1])
+        self.assertEqual(ana["areas"]["matematica"], [0, 0])
+
     def test_toda_rota_tem_dono(self):
         """Rota nova precisa ser classificada: pública, do aluno (Aluno) ou só do organizador (Organizador)."""
         publicas = {"/api/guia", "/api/versao", "/api/versao/lembrete", "/api/filtros", "/api/questao/{qid}",
