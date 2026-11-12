@@ -24,7 +24,7 @@ O rascunho fica salvo no `aluno.db` e volta na prática, no caderno de erros e n
 Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 **Lembrete de versão nova** na tela inicial, com consulta diária desligável (ADR 0024).
 **Tablet do próprio estudante** com o mesmo progresso do PC (ADR 0025). Versão **0.5.2** (lembrete + tablet).
-**Próximo passo:** testar o rascunho num iPad/caneta de verdade; painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
+**Próximo passo:** correções da revisão geral (seção abaixo), Parte 1 a 4; depois, painel do organizador por área. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -51,6 +51,55 @@ Rascunho e revisão do simulado publicados na **versão 0.5.1**.
   de assinatura de código ICP-Brasil de uma instituição parceira (escola, secretaria). Ver ADR 0017.
 - **Medir a IA local no PC de referência** (i3-N305, 8 GB): tempo por redação, uso de memória e concordância com
   redações de nota oficial conhecida. Pré-requisito da Fase 3.3.
+
+## Correções da revisão geral (2026-11-11): fazer TUDO, em partes
+Revisão com os agentes do agent-skills (code-reviewer, security-auditor, test-engineer, web-performance-auditor) e o
+`/ponytail-audit`. O autor pediu para corrigir todos os achados. Cada parte termina com testes, commit e versão.
+
+**Parte 1: segurança e perda de dados**
+- [ ] 1. Prática: `renderizarQuestao` não chama o `limparTela` anterior. O teclado de questões antigas grava respostas falsas.
+- [ ] 2. Ataques vindos da web contra o servidor local: CSRF (POST de outro site), DNS rebinding (leitura dos dados) e
+      clickjacking. Middleware com Host permitido, Origin/`Sec-Fetch-Site` nos métodos que alteram dados, cabeçalhos
+      de segurança (CSP, `X-Frame-Options`, `nosniff`, `Referrer-Policy`). Registrar em ADR.
+- [ ] 3. XSS no `markdown.js` com imagem e link aninhados (`![a [b](https://x) c](...)`). Reescrever sem reprocessar HTML + CSP.
+- [ ] 4. Força bruta do PIN: tentativas em paralelo furam a espera. Contar a tentativa de forma atômica antes do hash e
+      usar a mesma mensagem para "nome não existe" e "PIN errado".
+- [ ] 5. `pela_turma` depende de `turma.porta()`: ao fechar a turma, um pedido pela rede vira administrador. Usar `turma.PORTAS`.
+- [ ] 6. Simulado: PATCH simultâneos apagam respostas (sem transação); entrega dupla duplica o histórico.
+- [ ] 7. Rascunho: salvar antes de carregar sobrescreve o rascunho do servidor; carregamento que falhou nunca é refeito.
+- [ ] 8. Simulado: enquanto a próxima questão carrega, a resposta vai para a questão errada; a pré-carga que falhou fica presa no cache.
+- [ ] Testes desta parte: gabarito nunca sai antes da resposta; rotas de administração exigem o organizador;
+      isolamento entre alunos; entrega do simulado; Host e Origin.
+
+**Parte 2: robustez**
+- [ ] 9. Migração interrompida no meio deixa o `aluno.db` parcial e o aluno sem questões nem progresso (confirmar com teste).
+- [ ] 10. Sem limite de tamanho de pedido (rascunho de centenas de MB, `/api/turma/entrar`); cadastro ilimitado pela rede.
+- [ ] 11. `_resultado`/`_nota_tri` com `IN ()` vazio: a lista de simulados quebra se o banco novo não tiver aquele ano.
+- [ ] 12. Nome com acento em maiúsculas (`COLLATE NOCASE` só vale para ASCII): login falha e permite duplicata.
+- [ ] 13. `.sha256` vazio dá `IndexError` (500); `/api/versao?verificar=1` liberado pela rede gasta a cota do GitHub.
+- [ ] 14. `turma.abrir()` diz que abriu mesmo se o servidor não subiu.
+- [ ] 15. Testes: migração, SHA-256, lembrete uma vez por dia, rascunho (vazio apaga, grande recusa), remover
+      participante, nota TRI só com escala conferida, `plano` nos limites.
+- [ ] Pré-requisitos antigos: `esc()` em gabarito/alternativa; `/api/proxima` sem a lista de vistas na URL; importador
+      validando `A`–`E` e trocando URLs por regex; questões com 4 alternativas.
+
+**Parte 3: desempenho (PC fraco com sala cheia, tablet)**
+- [ ] 16. Rascunho: desenhar só o trecho novo no `pointermove`; cor calculada uma vez; borracha redesenha uma vez por evento.
+- [ ] 17. Imagens: `Cache-Control: immutable` em `/imagens/` (nome = hash do conteúdo); `width`/`height` ou `aspect-ratio`;
+      BMP convertido para PNG na importação.
+- [ ] 18. Simulado: resultado e nota TRI calculados uma vez (guardados na entrega); lista sem recalcular; revisão sem
+      buscar o simulado a cada questão.
+- [ ] 19. `_revisoes` só com as questões que já tiveram erro; grade do simulado sem recriar os 90 botões; marcar sem
+      redesenhar a questão; prática com menos idas e voltas (questão junto com `/api/proxima`); guia em cache;
+      `/api/turma/eu` sem bloquear a navegação; GZip.
+
+**Parte 4: menores**
+- [ ] Cookie da turma com validade e "Sair" que invalida a sessão no servidor.
+- [ ] Cadeia de build: actions fixadas por SHA, `contents: write` só no passo de anexar, hash do zip do Python e do
+      `dados.zip`, `pip --require-hashes`; avaliar assinatura Ed25519 do `.sha256`.
+- [ ] Código duplicado de certa/errada e da grade (`renderizarQuestao`, `resultadoSimulado`, `revisarQuestaoSimulado`).
+- [ ] `ip_local` com VPN/Hyper-V: mostrar todos os IPs privados.
+- [ ] `markdown.js`: só imagens locais (`/imagens/`), nada remoto.
 
 ## Pré-requisitos do modo turma (revisão de código, 2026-11-08)
 - ✅ **Uma conexão SQLite por requisição** (v0.4.4): dependência `banco()` em `app/main.py`, `INSERT ... RETURNING id`
