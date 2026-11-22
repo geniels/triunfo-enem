@@ -132,7 +132,7 @@ class TestApi(unittest.TestCase):
         """Rota nova precisa ser classificada: pública, do aluno (Aluno) ou só do organizador (Organizador)."""
         publicas = {"/api/guia", "/api/versao", "/api/versao/lembrete", "/api/filtros", "/api/questao/{qid}",
                     "/api/redacao/conteudo", "/api/turma/eu", "/api/turma/entrar", "/api/turma/cadastrar",
-                    "/api/turma/sair", "/"}
+                    "/api/turma/sair", "/api/conferir", "/"}
         so_organizador = {"/api/guia/sincronizar", "/api/atualizar", "/api/preferencias", "/api/turma",
                           "/api/turma/abrir", "/api/turma/fechar", "/api/turma/meu-acesso",
                           "/api/turma/participantes/{pid}/pin", "/api/turma/participantes/{pid}"}

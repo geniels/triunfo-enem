@@ -26,8 +26,11 @@ Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 **Tablet do próprio estudante** com o mesmo progresso do PC (ADR 0025). Versão **0.5.2** (lembrete + tablet).
 **Revisão geral concluída** (Partes 1 a 4, versões 0.5.3 a 0.5.6). Painel do organizador por área pronto: a lista de participantes mostra o acerto de cada pessoa em cada área.
 **Fase 4 concluída** (versão 0.5.7): a turma tem tela própria (`#turma`), aberta pelo atalho "Turma" ao lado da engrenagem,
-visível só no PC de quem organiza. **Próximo passo:** escolher entre a Fase 3.3 (IA local, aguarda medição) e a Fase 5
-(provas 2024/2025, filtro por assunto). A 3.3 (IA local) aguarda a medição de desempenho.
+visível só no PC de quem organiza. **Fase 5 em andamento**, na ordem: 5.1 Conferir minha prova ✅ (versão 0.5.8, ADR 0028; gabaritos do ENEM 2026) ·
+5.2 assunto das questões pela habilidade oficial (H1–H30 dos microdados) · 5.3 provas 2024/2025 (texto dos PDFs +
+microdados, com revisão humana) · 5.4 Raspberry Pi (servidor fixo da turma; precisa de um aparelho para testar).
+A Fase 3.3 (IA na redação) fica para depois, por decisão do autor.
+**Próximo passo:** 5.2, assunto das questões. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -37,7 +40,7 @@ visível só no PC de quem organiza. **Próximo passo:** escolher entre a Fase 3
 | 2 | 2.1 simulado por dia, tempo e numeração oficiais ✅ · 2.2 nota TRI com parâmetros oficiais, validada ✅ · 2.3 revisão espaçada (1/3/7/21 dias, fáceis primeiro) ✅ · 2.4 plano de estudos em ciclo ✅ | ✅ Concluída |
 | 3 | **Redação**: 3.1 temas desde 1998, editor pautado, cronômetro, linhas, salvamento ✅ · 3.2 autoavaliação pelas 5 competências e histórico ✅ · 3.3 correção por IA opcional ⏳ | ▶️ Em andamento |
 | 4 | **Modo turma** (ADR 0022): abrir turma na rede local ✅ · nome + PIN ✅ · participantes e novo PIN ✅ · painel do organizador por área ✅ · tela própria da turma ✅ | ✅ Concluída |
-| 5 | **Instalador `.exe` da edição Estudante** ✅ (v0.4.1) · atualização em 1 clique ✅ · provas 2024/2025; classificação por assunto; Raspberry Pi | ⏳ |
+| 5 | **Instalador `.exe` da edição Estudante** ✅ (v0.4.1) · atualização em 1 clique ✅ · conferir minha prova ✅ · assunto das questões ⏳ · provas 2024/2025 ⏳ · Raspberry Pi ⏳ | ▶️ Em andamento |
 
 ## Decisões tomadas em 2026-11-08
 - **Duas edições** (ADR 0010): Estudante (zero administração) e Escola (configurada por um responsável).
@@ -128,7 +131,6 @@ Revisão com os agentes do agent-skills (code-reviewer, security-auditor, test-e
   com a escala do INEP, causa a investigar: provavelmente a ordem das respostas no arquivo de participantes).
 - TRI no treino livre: mostrar a dificuldade (parâmetro b) de cada questão e priorizar as fáceis erradas.
 - Redação: gráfico da evolução da nota; dica da competência mais fraca; sincronizar `redacao.json` como o guia.
-- "Conferir minha prova": o aluno informa a cor do caderno e as respostas e recebe os acertos (precisa dos gabaritos por cor de cada ano, em PDF do INEP). Útil na semana da prova; avaliar na Fase 5.
 - Edital 2027: editar `app/conteudo/guia.md`, versao 2027.1, e dar push (passo a passo na ADR 0008).
 - Navegação inferior fixa no celular (hoje o menu ocupa duas linhas em 390 px).
 - Esconder a dica de atalhos de teclado em telas de toque.

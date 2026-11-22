@@ -74,6 +74,7 @@ const rotas = {
   guia: telaGuia,
   config: telaConfig,
   turma: telaTurma,
+  conferir: telaConferir,
   questao: (id) => telaQuestaoAvulsa(Number(id)),
 };
 
@@ -208,6 +209,7 @@ async function telaInicio() {
     </section>`;
   $("#revisar")?.addEventListener("click", irParaRevisao);
   mostrarLembreteVersao(); // depois de desenhar: não atrasa a tela inicial
+  mostrarConviteConferir();
 }
 
 function irParaRevisao() {
@@ -793,9 +795,14 @@ const relogio = (s) =>
 async function telaSimulado(id, qid) {
   if (id && qid) return revisarQuestaoSimulado(Number(id), Number(qid));
   if (id) return abrirSimulado(Number(id));
-  const [f, lista] = await Promise.all([filtros(), api("/api/simulados")]);
+  const [f, lista, conferiveis] = await Promise.all([filtros(), api("/api/simulados"), api("/api/conferir")]);
   const p = prefs.ler();
   conteudo.innerHTML = `
+    ${conferiveis.length ? `<section class="cartao destaque-aviso convite-conferir">
+      <h2>Fez o ENEM ${conferiveis[0].ano}?</h2>
+      <p>Confira seus acertos com o gabarito oficial: escolha a cor do caderno e digite as respostas que você anotou.</p>
+      <div class="acoes"><a class="botao" href="#conferir">Conferir minha prova</a></div>
+    </section>` : ""}
     <section class="cartao config">
       <h1>Simulado</h1>
       <p class="sub">Um dia de prova inteiro de um ano, na ordem oficial e com o tempo oficial. Treine o ritmo, a técnica
@@ -1135,6 +1142,135 @@ async function revisarQuestaoSimulado(sid, qid) {
   limparTela = () => { document.removeEventListener("keydown", teclado); desligarRascunho(); };
 }
 
+/* ---------------------------- Conferir minha prova (ADR 0028) ---------------------------- */
+
+// A pessoa digita as respostas que anotou na prova real e vê os acertos pelo gabarito oficial do caderno.
+// O rascunho fica só neste navegador (conveniência); nada é guardado no servidor.
+async function telaConferir() {
+  const provas = await api("/api/conferir");
+  if (!provas.length) {
+    conteudo.innerHTML = `<section class="cartao"><h1>Conferir minha prova</h1>
+      <p>Ainda não há gabarito oficial neste TRIunfo. Ele chega numa atualização, poucos dias depois da prova.</p></section>`;
+    return;
+  }
+  const chave = (ano, dia) => `triunfo-conferir-${ano}-${dia}`;
+  const lerRascunho = (ano, dia) => { try { return JSON.parse(localStorage.getItem(chave(ano, dia))) || {}; } catch { return {}; } };
+  const guardar = (ano, dia, dados) => { try { localStorage.setItem(chave(ano, dia), JSON.stringify(dados)); } catch {} };
+
+  conteudo.innerHTML = `
+    <section class="cartao config">
+      <h1>Conferir minha prova</h1>
+      <p class="sub">Escolha o dia e a <b>cor do seu caderno</b> (está na capa) e digite as respostas que você anotou.
+        Cada caderno tem as questões numa ordem diferente, então a cor faz diferença.</p>
+      <div class="campos">
+        <label>Prova <select id="c-ano">${provas.map((p) => `<option value="${p.ano}">ENEM ${p.ano}</option>`).join("")}</select></label>
+        <label>Dia <select id="c-dia"><option value="1">1º dia (questões 1 a 90)</option><option value="2">2º dia (questões 91 a 180)</option></select></label>
+        <label>Caderno <select id="c-caderno"></select></label>
+        <label id="c-idioma-rotulo">Língua estrangeira
+          <select id="c-idioma"><option value="ingles">Inglês</option><option value="espanhol">Espanhol</option></select></label>
+      </div>
+      <p class="sub">Digite a letra de cada questão: o cursor passa sozinho para a próxima. Deixe vazio o que ficou em
+        branco. Também dá para colar a sequência inteira (por exemplo, <code>ABDCE-BA...</code>, com <code>-</code> para branco).</p>
+      <div class="cartao-respostas" id="c-respostas"></div>
+      <div class="acoes"><button class="botao grande" id="c-conferir">Conferir</button>
+        <button class="botao link" id="c-limpar">Apagar respostas</button></div>
+    </section>
+    <div id="c-resultado" aria-live="polite"></div>`;
+
+  const atual = () => ({ ano: +$("#c-ano").value, dia: +$("#c-dia").value });
+  const prova = () => provas.find((p) => p.ano === atual().ano);
+  const campos = () => [...conteudo.querySelectorAll("#c-respostas input")];
+
+  function montar() {
+    const { ano, dia } = atual();
+    const r = lerRascunho(ano, dia);
+    $("#c-caderno").innerHTML = prova().dias[dia].map((c) => `<option value="${c.numero}">${esc(c.cor)} (caderno ${c.numero})</option>`).join("");
+    if (r.caderno) $("#c-caderno").value = r.caderno;
+    $("#c-idioma").value = r.idioma || prefs.ler().idioma || "ingles";
+    $("#c-idioma-rotulo").hidden = dia !== 1;
+    const inicio = dia === 1 ? 1 : 91;
+    $("#c-respostas").innerHTML = Array.from({ length: 90 }, (_, i) => {
+      const n = inicio + i;
+      return `<label class="resp"><span>${n}</span><input data-n="${n}" maxlength="1" autocomplete="off" autocapitalize="characters"
+        spellcheck="false" aria-label="Questão ${n}" value="${esc(r.respostas?.[n] || "")}"></label>`;
+    }).join("");
+    $("#c-resultado").innerHTML = "";
+  }
+
+  function salvar() {
+    const { ano, dia } = atual();
+    const respostas = {};
+    campos().forEach((i) => { if (i.value) respostas[i.dataset.n] = i.value; });
+    guardar(ano, dia, { caderno: +$("#c-caderno").value, idioma: $("#c-idioma").value, respostas });
+    return respostas;
+  }
+
+  $("#c-respostas").addEventListener("input", (e) => {
+    const i = e.target;
+    i.value = i.value.toUpperCase().replace(/[^A-E]/g, "");
+    if (i.value) campos()[campos().indexOf(i) + 1]?.focus();
+    salvar();
+  });
+  $("#c-respostas").addEventListener("keydown", (e) => {
+    const lista = campos(), k = lista.indexOf(e.target);
+    if (e.key === "Backspace" && !e.target.value) lista[k - 1]?.focus();
+    else if (e.key === "ArrowRight") lista[k + 1]?.focus();
+    else if (e.key === "ArrowLeft") lista[k - 1]?.focus();
+  });
+  $("#c-respostas").addEventListener("paste", (e) => {
+    const texto = (e.clipboardData?.getData("text") || "").toUpperCase().replace(/[^A-E\-.]/g, "");
+    if (texto.length < 2) return; // uma letra só: comportamento normal
+    e.preventDefault();
+    const lista = campos();
+    let k = lista.indexOf(e.target);
+    for (const ch of texto) {
+      if (k >= lista.length) break;
+      lista[k++].value = /[A-E]/.test(ch) ? ch : "";
+    }
+    lista[Math.min(k, lista.length - 1)].focus();
+    salvar();
+  });
+  for (const id of ["#c-ano", "#c-dia"]) $(id).onchange = montar;
+  for (const id of ["#c-caderno", "#c-idioma"]) $(id).onchange = salvar;
+  $("#c-limpar").onclick = () => {
+    if (!confirm("Apagar todas as respostas digitadas deste dia?")) return;
+    campos().forEach((i) => (i.value = ""));
+    salvar();
+    $("#c-resultado").innerHTML = "";
+  };
+
+  $("#c-conferir").onclick = async () => {
+    const { ano, dia } = atual();
+    const respostas = salvar();
+    const r = await post("/api/conferir", { ano, dia, caderno: +$("#c-caderno").value, idioma: $("#c-idioma").value, respostas });
+    const acertos = r.areas.reduce((s, a) => s + a.acertos, 0), total = r.areas.reduce((s, a) => s + a.total, 0);
+    const rotulo = { certa: "certa", errada: "errada", branco: "em branco", anulada: "anulada, não conta" };
+    const detalhe = (it) => it.situacao === "errada" ? `, você marcou ${esc(it.resposta)}, gabarito ${esc(it.gabarito)}`
+      : it.situacao === "branco" ? `, gabarito ${esc(it.gabarito)}` : "";
+    $("#c-resultado").innerHTML = `
+      <section class="cartao">
+        <h2>ENEM ${r.ano}, ${r.dia}º dia, caderno ${esc(r.cor)}: ${acertos} acertos de ${total}</h2>
+        <div class="numeros">${r.areas.map((a) => `
+          <div class="numero"><b>${a.acertos} de ${a.total}</b><span>${esc(a.nome.replace(" e suas Tecnologias", ""))}${
+            a.brancos ? ` · ${a.brancos} em branco` : ""}${a.anuladas ? ` · ${a.anuladas} anulada (não conta)` : ""}</span></div>`).join("")}</div>
+        <p class="retorno destaque-aviso">Isto é o número de acertos, <b>não a sua nota</b>. No ENEM, a nota vem da TRI, que
+          pesa cada questão pela dificuldade (errar as fáceis custa mais), com parâmetros que o INEP só divulga depois.
+          Mais acertos quase sempre significam nota maior, mas duas pessoas com os mesmos acertos podem ter notas diferentes.</p>
+        <h3>Questão por questão</h3>
+        <p class="legenda"><span class="q certa">1</span> certa <span class="q errada">2</span> errada <span class="q">3</span> em branco ou anulada</p>
+        <div class="grade-cartao">${r.itens.map((it) => `<span class="q ${["certa", "errada"].includes(it.situacao) ? it.situacao : ""}"
+          role="img" aria-label="Questão ${it.numero}: ${rotulo[it.situacao]}${detalhe(it)}"
+          title="${it.situacao === "anulada" ? "Anulada" : `Gabarito ${esc(it.gabarito)}`}">${it.numero}</span>`).join("")}</div>
+        ${r.itens.some((it) => it.situacao === "errada") ? `<p class="sub">Erros: ${r.itens.filter((it) => it.situacao === "errada")
+          .map((it) => `<b>${it.numero}</b> (marcou ${esc(it.resposta)}, gabarito ${esc(it.gabarito)})`).join(" · ")}</p>` : ""}
+      </section>`;
+    $("#c-resultado h2").scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  montar();
+}
+
+
 /* ---------------------------- Plano de estudos (ADR 0016) ---------------------------- */
 
 const NOME_BLOCO = {
@@ -1402,6 +1538,19 @@ function lembreteAdiado(versao) {
     const a = JSON.parse(localStorage.getItem("triunfo-lembrete")) || {};
     return a.versao === versao && Date.now() < a.ate;
   } catch { return false; }
+}
+
+// Logo depois da prova, quem abre o TRIunfo quer conferir: convite no Início só com o gabarito do ano atual.
+async function mostrarConviteConferir() {
+  const provas = await fetch("/api/conferir").then((r) => r.json()).catch(() => []);
+  const inicio = $(".boas-vindas");
+  if (provas[0]?.ano !== new Date().getFullYear() || !inicio || $("#convite-conferir")) return;
+  inicio.insertAdjacentHTML("beforebegin", `
+    <section class="cartao destaque-aviso convite-conferir" id="convite-conferir">
+      <h2>Fez o ENEM ${provas[0].ano}?</h2>
+      <p>O gabarito oficial já está aqui. Escolha a cor do seu caderno e confira seus acertos.</p>
+      <div class="acoes"><a class="botao" href="#conferir">Conferir minha prova</a></div>
+    </section>`);
 }
 
 async function mostrarLembreteVersao() {

@@ -388,3 +388,12 @@ body:has(.rascunho-barra:not([hidden])) .conteudo { padding-bottom: 5.5rem; }
 .atalho-turma:hover { background: var(--fundo); color: var(--texto); }
 .atalho-turma.ativo { background: var(--primaria); color: var(--primaria-texto); }
 .atalho-turma:not([hidden]) ~ .engrenagem { margin-left: 0; }
+
+/* Conferir minha prova (ADR 0028) */
+.cartao-respostas { display: grid; grid-template-columns: repeat(auto-fill, minmax(4.6rem, 1fr)); gap: .35rem; margin: .75rem 0; }
+.resp { display: flex; align-items: center; gap: .3rem; font-size: .85rem; color: var(--suave); }
+.resp span { min-width: 1.9rem; text-align: right; }
+.resp input { width: 2.2rem; height: 2.2rem; text-align: center; font: inherit; font-weight: 700; color: var(--texto);
+  text-transform: uppercase; border: 1px solid var(--linha); border-radius: 6px; background: var(--cartao); }
+.resp input:focus { outline: 3px solid var(--primaria); outline-offset: 1px; }
+.convite-conferir h2 { margin-top: 0; }

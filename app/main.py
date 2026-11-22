@@ -766,6 +766,60 @@ def entregar_simulado(con: Con, aluno: Aluno, sid: int):
     return _simulado(con, aluno, sid)
 
 
+# ---------------------------- Conferir minha prova (ADR 0028) ----------------------------
+
+GABARITOS_DIR = RAIZ / "app" / "conteudo" / "gabaritos"  # gerados por scripts/importar_gabaritos.py
+# Ordem das áreas no caderno desde 2017 (dia 1: Linguagens e Humanas; dia 2: Natureza e Matemática).
+AREA_DA_QUESTAO = [(1, "linguagens"), (46, "ciencias-humanas"), (91, "ciencias-natureza"), (136, "matematica")]
+
+
+def _gabaritos() -> dict[int, dict]:
+    return {int(f.stem): json.loads(f.read_text(encoding="utf-8")) for f in sorted(GABARITOS_DIR.glob("*.json"))}
+
+
+@app.get("/api/conferir")
+def provas_para_conferir():
+    """Anos e cadernos disponíveis, SEM o gabarito (ADR 0003): ele só sai depois das respostas."""
+    return [{"ano": ano, "dias": {dia: [{"numero": c["numero"], "cor": c["cor"]} for c in cadernos]
+                                  for dia, cadernos in g["cadernos"].items()}}
+            for ano, g in sorted(_gabaritos().items(), reverse=True)]
+
+
+class Conferencia(BaseModel):
+    ano: int
+    dia: Literal[1, 2]
+    caderno: int
+    idioma: Literal["ingles", "espanhol"] = "ingles"
+    respostas: dict[int, Letra | None] = Field(max_length=90)
+
+
+@app.post("/api/conferir")
+def conferir_prova(c: Conferencia):
+    """Acertos da prova real, comparando com o gabarito oficial do caderno. Não é a nota: a nota do ENEM sai da TRI,
+    com parâmetros que o INEP só publica depois. Nada é guardado no servidor."""
+    caderno = next((x for x in _gabaritos().get(c.ano, {}).get("cadernos", {}).get(str(c.dia), [])
+                    if x["numero"] == c.caderno), None)
+    if not caderno:
+        raise HTTPException(404, "Não há gabarito desse caderno neste TRIunfo. Verifique o dia e a cor do caderno.")
+    areas, itens = {}, []
+    for numero, gab in sorted(caderno["gabarito"].items(), key=lambda x: int(x[0])):
+        n = int(numero)
+        if isinstance(gab, dict):  # questões 1 a 5: língua estrangeira
+            gab = gab[c.idioma]
+        area = next(a for inicio, a in reversed(AREA_DA_QUESTAO) if n >= inicio)
+        resposta = c.respostas.get(n)
+        situacao = "anulada" if gab is None else "branco" if not resposta else "certa" if resposta == gab else "errada"
+        a = areas.setdefault(area, {"area": area, "nome": AREAS[area], "acertos": 0, "total": 0, "brancos": 0, "anuladas": 0})
+        if situacao == "anulada":
+            a["anuladas"] += 1
+        else:
+            a["total"] += 1
+            a["acertos"] += situacao == "certa"
+            a["brancos"] += situacao == "branco"
+        itens.append({"numero": n, "resposta": resposta, "gabarito": gab, "situacao": situacao})
+    return {"ano": c.ano, "dia": c.dia, "caderno": c.caderno, "cor": caderno["cor"], "areas": list(areas.values()), "itens": itens}
+
+
 # ---------------------------- Rascunho com caneta (ADR 0023) ----------------------------
 
 CHAVE_RASCUNHO = r"^(q\d{1,9}|s\d{1,9}-\d{1,9})$"

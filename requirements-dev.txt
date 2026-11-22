@@ -1,0 +1,2 @@
+# Só para desenvolvimento (não vão no instalador).
+pypdf==7.1.1  # scripts/importar_gabaritos.py: lê os gabaritos em PDF do INEP (ADR 0028)

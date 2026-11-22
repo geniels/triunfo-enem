@@ -3,6 +3,7 @@ lembrete, rascunho, remoção de participante, nota TRI, plano)."""
 import io
 import tempfile
 import unittest
+import json
 from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
@@ -261,3 +262,43 @@ class TestPlanoLimites(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TestConferirProva(unittest.TestCase):
+    """ADR 0028: conferência da prova real com os gabaritos oficiais (app/conteudo/gabaritos)."""
+
+    def caderno(self, ano, dia, numero):
+        return next(c for c in main._gabaritos()[ano]["cadernos"][str(dia)] if c["numero"] == numero)
+
+    def test_lista_sem_gabarito(self):
+        lista = main.provas_para_conferir()
+        self.assertEqual(lista[0]["ano"], 2026)
+        self.assertNotIn("gabarito", json.dumps(lista))  # ADR 0003: só depois das respostas
+        self.assertIn({"numero": 1, "cor": "Azul"}, lista[0]["dias"]["1"])
+
+    def test_tudo_certo_com_anulada(self):
+        gab = self.caderno(2026, 2, 7)["gabarito"]
+        respostas = {int(n): g for n, g in gab.items() if g}
+        r = main.conferir_prova(main.Conferencia(ano=2026, dia=2, caderno=7, respostas=respostas))
+        por_area = {a["area"]: (a["acertos"], a["total"], a["anuladas"]) for a in r["areas"]}
+        self.assertEqual(por_area, {"ciencias-natureza": (45, 45, 0), "matematica": (44, 44, 1)})
+
+    def test_lingua_estrangeira_e_brancos(self):
+        gab = self.caderno(2026, 1, 1)["gabarito"]
+        r = main.conferir_prova(main.Conferencia(ano=2026, dia=1, caderno=1, idioma="espanhol",
+                                                 respostas={1: gab["1"]["espanhol"], 2: "E" if gab["2"]["espanhol"] != "E" else "A"}))
+        ling = r["areas"][0]
+        self.assertEqual((ling["area"], ling["acertos"], ling["brancos"]), ("linguagens", 1, 43))
+        self.assertEqual(r["itens"][1]["situacao"], "errada")
+
+    def test_caderno_inexistente(self):
+        with self.assertRaises(HTTPException) as e:
+            main.conferir_prova(main.Conferencia(ano=2026, dia=1, caderno=99, respostas={}))
+        self.assertEqual(e.exception.status_code, 404)
+
+    def test_leitura_das_linhas_do_pdf(self):
+        from scripts.importar_gabaritos import LINHA, letra
+        self.assertEqual(LINHA.match("1 B A").groups(), ("1", " B A"))
+        self.assertTrue(LINHA.match("153 ANULADO"))  # 2026: antes só "ANULADA" era aceito
+        self.assertIsNone(letra("ANULADO"))
+        self.assertIsNone(LINHA.match("QUESTÃO GABARITO"))
