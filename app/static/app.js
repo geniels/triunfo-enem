@@ -10,6 +10,14 @@ const MOTIVOS = {
   chute: "Chutei",
 };
 
+const MIN_ASSUNTO = 5; // respostas num assunto antes de apontá-lo como fraco (menos que isso é sorte ou azar)
+const NOME_AREA_CURTO = {
+  linguagens: "Linguagens",
+  "ciencias-humanas": "Ciências Humanas",
+  "ciencias-natureza": "Ciências da Natureza",
+  matematica: "Matemática",
+};
+
 const CORES_AREA = {
   linguagens: "area-ling",
   "ciencias-humanas": "area-hum",
@@ -117,6 +125,7 @@ async function telaInicio() {
     api("/api/estatisticas"), filtros(), api("/api/guia"), api("/api/revisao"), api("/api/plano"),
   ]);
   const regras = g.secoes[0];
+  const reforcar = (est.assuntos || []).filter((a) => a.respondidas >= MIN_ASSUNTO && a.taxa < 70).slice(0, 5);
   const totalBanco = f.areas.reduce((s, a) => s + a.total, 0);
 
   const barrasArea = est.areas
@@ -145,10 +154,11 @@ async function telaInicio() {
   const dias = est.dias.length
     ? `<div class="grafico-dias">${est.dias
         .map(
-          (d) => `<div class="dia" title="${d.dia}: ${d.acertos}/${d.respondidas}">
+          (d) => `<div class="dia" role="img" title="${d.dia}: ${d.acertos}/${d.respondidas}"
+            aria-label="${d.dia.slice(8)}/${d.dia.slice(5, 7)}: ${d.acertos} de ${d.respondidas} acertos">
             <div class="dia-barra" style="height:${(100 * d.respondidas) / maxDia}%">
               <div class="dia-acertos" style="height:${(100 * d.acertos) / d.respondidas}%"></div>
-            </div><span>${d.dia.slice(8)}/${d.dia.slice(5, 7)}</span></div>`
+            </div><span aria-hidden="true">${d.dia.slice(8)}/${d.dia.slice(5, 7)}</span></div>`
         )
         .join("")}</div>`
     : "<p class='vazio'>Seu histórico dos últimos 14 dias aparece aqui.</p>";
@@ -190,6 +200,17 @@ async function telaInicio() {
         <h2 class="espaco">Últimos dias</h2>${dias}
       </section>
     </div>
+    ${reforcar.length ? `
+    <section class="cartao espaco-topo" aria-labelledby="reforcar-titulo">
+      <h2 id="reforcar-titulo">O que reforçar</h2>
+      <p class="sub">Os assuntos em que você menos acerta (com pelo menos ${MIN_ASSUNTO} questões respondidas em cada).</p>
+      <ul class="lista-reforcar">${reforcar.map((a) => `
+        <li><span class="bolinha ${CORES_AREA[a.area]}"></span>
+          <span class="nome">${esc(a.nome)} <small>${esc(NOME_AREA_CURTO[a.area])}</small></span>
+          <span class="valor">${a.taxa}% <small>(${a.acertos} de ${a.respondidas})</small></span>
+          <button class="botao secundario pequeno" data-area="${a.area}" data-competencia="${a.competencia}"
+            aria-label="Praticar ${esc(a.nome)}">Praticar</button></li>`).join("")}</ul>
+    </section>` : ""}
 
     <section class="cartao guia destaque espaco-topo">
       <h2>${esc(regras.titulo)}: ${esc(g.edital)}</h2>
@@ -208,6 +229,13 @@ async function telaInicio() {
       </ul>
     </section>`;
   $("#revisar")?.addEventListener("click", irParaRevisao);
+  conteudo.querySelector(".lista-reforcar")?.addEventListener("click", (e) => {
+    const b = e.target.closest("button[data-competencia]");
+    if (!b) return;
+    prefs.salvar({ ...prefs.ler(), area: b.dataset.area, competencia: b.dataset.competencia, modo: "novas", ano: "" });
+    sessao = null;
+    location.hash = "#praticar";
+  });
   mostrarLembreteVersao(); // depois de desenhar: não atrasa a tela inicial
   mostrarConviteConferir();
 }
@@ -249,6 +277,9 @@ async function telaPraticar() {
         <label>Língua estrangeira
           <select id="f-idioma"><option value="ingles">Inglês</option><option value="espanhol">Espanhol</option></select>
         </label>
+        <label id="f-assunto-rotulo" hidden>Assunto (opcional)
+          <select id="f-assunto"></select>
+        </label>
       </div>
 
       <fieldset><legend>Modo</legend><div class="chips" id="f-modo">
@@ -270,12 +301,23 @@ async function telaPraticar() {
   marcarChip(gModo, p.modo);
   $("#f-ano").value = p.ano;
   $("#f-idioma").value = p.idioma;
-  gArea.onclick = (e) => { const b = e.target.closest("button"); if (b) { p.area = b.dataset.v; marcarChip(gArea, p.area); } };
+  // Assunto = competência da Matriz do ENEM (ADR 0029); só aparece depois de escolher a área.
+  function montarAssuntos() {
+    const lista = f.assuntos?.[p.area] || [];
+    $("#f-assunto-rotulo").hidden = !lista.length;
+    if (!lista.some((c) => c.competencia === +p.competencia)) p.competencia = "";
+    $("#f-assunto").innerHTML = `<option value="">Todos os assuntos</option>` + lista.map((c) =>
+      `<option value="${c.competencia}" title="${esc(c.oficial)}">${esc(c.nome)} (${c.total})</option>`).join("");
+    $("#f-assunto").value = p.competencia || "";
+  }
+  montarAssuntos();
+  gArea.onclick = (e) => { const b = e.target.closest("button"); if (b) { p.area = b.dataset.v; marcarChip(gArea, p.area); montarAssuntos(); } };
   gModo.onclick = (e) => { const b = e.target.closest("button"); if (b) { p.modo = b.dataset.v; marcarChip(gModo, p.modo); } };
 
   $("#comecar").onclick = async () => {
     p.ano = $("#f-ano").value;
     p.idioma = $("#f-idioma").value;
+    p.competencia = $("#f-assunto-rotulo").hidden ? "" : $("#f-assunto").value;
     prefs.salvar(p);
     sessao = { filtros: { ...p }, vistas: [], acertos: 0, respondidas: 0 };
     const ok = await carregarProxima();
@@ -294,9 +336,10 @@ async function telaPraticar() {
 }
 
 async function carregarProxima() {
-  const { area, ano, idioma, modo } = sessao.filtros;
+  const { area, ano, idioma, modo, competencia } = sessao.filtros;
   // As vistas vão no corpo: na URL, sessões longas passavam do limite de tamanho.
-  const r = await post("/api/proxima", { area: area || null, ano: ano ? +ano : null, idioma, modo, excluir: sessao.vistas });
+  const r = await post("/api/proxima", { area: area || null, ano: ano ? +ano : null, idioma, modo, excluir: sessao.vistas,
+    competencia: area && competencia ? +competencia : null });
   if (!r.id) return false;
   sessao.restantes = r.restantes;
   sessao.atual = r.questao; // vem junto com a próxima: uma ida e volta a menos
@@ -391,7 +434,8 @@ function renderizarQuestao(q, { placar, aoResponder, proxima, encerrar, voltar }
   conteudo.innerHTML = `
     <div class="barra-questao">
       <span class="etiqueta ${CORES_AREA[q.area]}">${esc(q.area_nome.replace(" e suas Tecnologias", ""))}</span>
-      <span>ENEM ${q.ano} · Questão ${q.indice}${q.idioma ? " · " + (q.idioma === "ingles" ? "Inglês" : "Espanhol") : ""}</span>
+      <span>ENEM ${q.ano} · Questão ${q.indice}${q.idioma ? " · " + (q.idioma === "ingles" ? "Inglês" : "Espanhol") : ""}${
+        q.assunto ? ` · <span class="assunto">${esc(q.assunto)}</span>` : ""}</span>
       <span class="cronometro" id="cronometro" role="timer" aria-label="Tempo nesta questão">0:00</span>
     </div>
     <p class="placar">${esc(placar)}</p>

@@ -15,8 +15,8 @@ permissions:
   contents: read
 
 env:
-  DADOS: dados-2026.1                                        # versão-prévia com questões, imagens e parâmetros TRI
-  DADOS_SHA256: 9a3d3557cb99ba75fee18cf76576e1e6f6a01a270edc09adc36e8da2c3cc96fd  # trocar junto com DADOS
+  DADOS: dados-2026.2                                        # versão-prévia com questões, imagens e parâmetros TRI
+  DADOS_SHA256: b16ffbac8995e3347c15193a7164d525d15f2bab6262625e8250c2944467b4cd  # trocar junto com DADOS
   INNOSETUP: 6.7.1
   SIGNPATH_ORGANIZATION_ID: ${{ vars.SIGNPATH_ORGANIZATION_ID }}   # vazio = assinatura desligada
 

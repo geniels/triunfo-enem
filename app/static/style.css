@@ -137,7 +137,9 @@ nav a.ativo { background: var(--primaria); color: var(--primaria-texto); }
 .lista-motivos li.vazio { display: block; border: 0; }
 
 .grafico-dias { display: flex; align-items: flex-end; gap: 4px; height: 120px; }
-.dia { flex: 1; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+.dia { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; height: 100%; justify-content: flex-end; }
+/* No celular, 14 datas não cabem: mostra uma sim, outra não (as barras de todos os dias continuam). */
+@media (max-width: 520px) { .dia span { white-space: nowrap; } .dia:nth-child(even) span { visibility: hidden; } }
 .dia span { font-size: .65rem; color: var(--suave); margin-top: 2px; }
 .dia-barra { width: 100%; max-width: 28px; background: var(--linha); border-radius: 4px 4px 0 0; display: flex; align-items: flex-end; min-height: 2px; }
 .dia-acertos { width: 100%; background: var(--ok); border-radius: 4px 4px 0 0; }
@@ -397,3 +399,11 @@ body:has(.rascunho-barra:not([hidden])) .conteudo { padding-bottom: 5.5rem; }
   text-transform: uppercase; border: 1px solid var(--linha); border-radius: 6px; background: var(--cartao); }
 .resp input:focus { outline: 3px solid var(--primaria); outline-offset: 1px; }
 .convite-conferir h2 { margin-top: 0; }
+
+/* Assunto das questões (ADR 0029) */
+.lista-reforcar { list-style: none; padding: 0; margin: .5rem 0 0; }
+.lista-reforcar li { display: flex; align-items: center; gap: .6rem; padding: .55rem 0; border-top: 1px solid var(--linha); flex-wrap: wrap; }
+.lista-reforcar li:first-child { border-top: 0; }
+.lista-reforcar .nome { flex: 1 1 12rem; font-weight: 600; }
+.lista-reforcar .nome small, .lista-reforcar .valor small { color: var(--suave); font-weight: 400; }
+.lista-reforcar .valor { font-weight: 700; }

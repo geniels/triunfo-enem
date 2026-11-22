@@ -239,13 +239,35 @@ def filtro_sql(area: str | None, ano: int | None, idioma: str) -> tuple[str, lis
     return " AND ".join(where), params
 
 
+# Assunto = competência da Matriz de Referência do ENEM, a partir da habilidade H1..H30 do INEP (ADR 0029).
+ASSUNTOS = json.loads((RAIZ / "app" / "conteudo" / "assuntos.json").read_text(encoding="utf-8"))["areas"]
+
+
+def _assunto(area: str, habilidade: int | None) -> dict | None:
+    if not habilidade:
+        return None
+    return next((c for c in ASSUNTOS.get(area, []) if c["habilidades"][0] <= habilidade <= c["habilidades"][1]), None)
+
+
 @app.get("/api/filtros")
 def filtros(con: Con):
     anos = [r[0] for r in con.execute("SELECT DISTINCT ano FROM questoes ORDER BY ano DESC")]
     contagem = dict(con.execute("SELECT area, COUNT(*) FROM questoes WHERE idioma IN ('', 'ingles') GROUP BY area"))
+    por_assunto = defaultdict(int)
+    for area, hab, n in con.execute(
+        "SELECT q.area, t.habilidade, COUNT(*) FROM questoes q JOIN questoes_tri t ON t.questao_id = q.id "
+        "WHERE t.habilidade IS NOT NULL AND q.idioma IN ('', 'ingles') GROUP BY 1, 2"
+    ):
+        if c := _assunto(area, hab):
+            por_assunto[(area, c["competencia"])] += n
     return {
         "anos": anos,
         "areas": [{"valor": k, "nome": v, "total": contagem.get(k, 0)} for k, v in AREAS.items()],
+        # Vazio com um banco de questões antigo (sem habilidade): a tela esconde o filtro de assunto.
+        "assuntos": {area: [{"competencia": c["competencia"], "nome": c["nome"], "oficial": c["oficial"],
+                             "total": por_assunto[(area, c["competencia"])]}
+                            for c in lista if por_assunto[(area, c["competencia"])]]
+                     for area, lista in ASSUNTOS.items() if any(por_assunto[(area, c["competencia"])] for c in lista)},
     }
 
 
@@ -286,6 +308,7 @@ class PedidoProxima(BaseModel):
     idioma: Literal["ingles", "espanhol"] = "ingles"
     modo: Literal["novas", "todas", "erros", "revisao"] = "novas"
     excluir: list[int] = Field(default=[], max_length=10_000)  # vistas na sessão; no corpo, sem limite de URL
+    competencia: int | None = Field(default=None, ge=1, le=9)  # assunto dentro da área (ADR 0029)
 
 
 @app.post("/api/proxima")
@@ -297,6 +320,10 @@ def proxima(p: PedidoProxima, con: Con, aluno: Aluno):
         fila = [q for q in _revisoes(con, aluno)["hoje"] if q not in vistas]
         return _com_questao(con, fila[0] if fila else None, len(fila))
     where, params = filtro_sql(area, ano, idioma)
+    assunto = next((c for c in ASSUNTOS.get(area or "", []) if c["competencia"] == p.competencia), None)
+    if assunto:
+        where += " AND q.id IN (SELECT questao_id FROM questoes_tri WHERE habilidade BETWEEN ? AND ?)"
+        params.extend(assunto["habilidades"])
     if modo == "novas":
         where += " AND q.id NOT IN (SELECT questao_id FROM respostas WHERE aluno_id = ?)"
         params.append(aluno)
@@ -328,6 +355,8 @@ def questao(con: Con, qid: int):
     alts = con.execute(
         "SELECT letra, texto, arquivo FROM alternativas WHERE questao_id = ? ORDER BY letra", (qid,)
     ).fetchall()
+    hab = con.execute("SELECT habilidade FROM questoes_tri WHERE questao_id = ?", (qid,)).fetchone()
+    assunto = _assunto(q["area"], hab[0] if hab else None)
     return {
         "id": q["id"],
         "ano": q["ano"],
@@ -340,6 +369,7 @@ def questao(con: Con, qid: int):
         "introducao": q["introducao"],
         "arquivos": json.loads(q["arquivos"] or "[]"),
         "alternativas": [dict(a) for a in alts],
+        "assunto": assunto["nome"] if assunto else None,
         "dimensoes": imagens.da_questao(q["contexto"], q["introducao"], q["arquivos"],
                                         *(a["texto"] for a in alts), *(a["arquivo"] for a in alts)),
     }
@@ -379,6 +409,23 @@ def marcar_motivo(con: Con, aluno: Aluno, rid: int, m: Motivo):
     if not n:
         raise HTTPException(404, "Resposta não encontrada")
     return {"ok": True}
+
+
+def _desempenho_por_assunto(con: sqlite3.Connection, aluno: int) -> list[dict]:
+    """Acerto por assunto (competência), do pior para o melhor: mostra o que reforçar."""
+    soma = {}
+    for area, hab, n, acertos in con.execute(
+        "SELECT q.area, t.habilidade, COUNT(*), SUM(r.correta) FROM respostas r JOIN questoes q ON q.id = r.questao_id "
+        "JOIN questoes_tri t ON t.questao_id = r.questao_id WHERE r.aluno_id = ? AND t.habilidade IS NOT NULL GROUP BY 1, 2",
+        (aluno,),
+    ):
+        if c := _assunto(area, hab):
+            s = soma.setdefault((area, c["competencia"]), {"area": area, "competencia": c["competencia"], "nome": c["nome"],
+                                                           "respondidas": 0, "acertos": 0})
+            s["respondidas"] += n
+            s["acertos"] += acertos
+    lista = [s | {"taxa": round(100 * s["acertos"] / s["respondidas"])} for s in soma.values()]
+    return sorted(lista, key=lambda s: (s["taxa"], -s["respondidas"]))
 
 
 @app.get("/api/estatisticas")
@@ -421,7 +468,7 @@ def estatisticas(con: Con, aluno: Aluno):
     acertos = sum(a["acertos"] for a in areas)
     return {
         "total": total, "acertos": acertos, "taxa": round(100 * acertos / total) if total else None,
-        "areas": areas, "motivos": motivos, "dias": dias[::-1],
+        "areas": areas, "motivos": motivos, "dias": dias[::-1], "assuntos": _desempenho_por_assunto(con, aluno),
     }
 
 

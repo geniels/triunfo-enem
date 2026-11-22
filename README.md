@@ -108,6 +108,7 @@ Você não precisa configurar nada nem entender de computador:
 ## 📋 Resumo de tudo o que você encontra no TRIunfo
 
 - **Painel de Desempenho completo ([veja a tela inicial](docs/imagens/inicio.png)):** acompanhe sua porcentagem de acertos e seu tempo médio por questão em cada área, descubra se você erra mais por falta de conteúdo ou falta de atenção e veja seu ritmo nos últimos 14 dias.
+- **Estude por assunto:** escolha, por exemplo, *Geometria* ou *Química* na hora de praticar (assuntos oficiais da Matriz de Referência do ENEM), e veja no Início **o que reforçar**: os assuntos em que você menos acerta, com um botão para praticar na hora.
 - **Conferir minha prova:** fez o ENEM? Escolha a cor do seu caderno, digite as respostas que você anotou e veja seus acertos por área com o **gabarito oficial** (já com o ENEM 2026). Funciona sem internet.
 - **Guia da Prova (o Edital traduzido):** horários dos portões, quais documentos digitais valem, qual caneta levar, o que elimina na hora e o que dá nota zero na redação — sempre atualizado com o edital oficial.
 - **Estude no celular/tablet ou em Turma (Wi-Fi):**

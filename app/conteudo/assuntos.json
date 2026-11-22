@@ -1,0 +1,284 @@
+{
+ "fonte": "Matriz de Referência do ENEM (INEP): https://download.inep.gov.br/download/enem/matriz_referencia.pdf",
+ "nota": "nome = como o TRIunfo mostra ao estudante; oficial = texto da competência na Matriz.",
+ "areas": {
+  "linguagens": [
+   {
+    "competencia": 1,
+    "nome": "Tecnologia e comunicação",
+    "habilidades": [
+     1,
+     4
+    ],
+    "oficial": "Aplicar as tecnologias da comunicação e da informação na escola, no trabalho e em outros contextos relevantes para sua vida."
+   },
+   {
+    "competencia": 2,
+    "nome": "Língua estrangeira",
+    "habilidades": [
+     5,
+     8
+    ],
+    "oficial": "Conhecer e usar língua(s) estrangeira(s) moderna(s) como instrumento de acesso a informações e a outras culturas e grupos sociais*."
+   },
+   {
+    "competencia": 3,
+    "nome": "Corpo e movimento (Educação Física)",
+    "habilidades": [
+     9,
+     11
+    ],
+    "oficial": "Compreender e usar a linguagem corporal como relevante para a própria vida, integradora social e formadora da identidade."
+   },
+   {
+    "competencia": 4,
+    "nome": "Arte",
+    "habilidades": [
+     12,
+     14
+    ],
+    "oficial": "Compreender a arte como saber cultural e estético gerador de significação e integrador da organização do mundo e da própria identidade."
+   },
+   {
+    "competencia": 5,
+    "nome": "Literatura e recursos expressivos",
+    "habilidades": [
+     15,
+     17
+    ],
+    "oficial": "Analisar, interpretar e aplicar recursos expressivos das linguagens, relacionando textos com seus contextos, mediante a natureza, função, organização, estrutura das manifestações, de acordo com as condições de produção e recepção."
+   },
+   {
+    "competencia": 6,
+    "nome": "Interpretação e organização do texto",
+    "habilidades": [
+     18,
+     20
+    ],
+    "oficial": "Compreender e usar os sistemas simbólicos das diferentes linguagens como meios de organização cognitiva da realidade pela constituição de significados, expressão, comunicação e informação."
+   },
+   {
+    "competencia": 7,
+    "nome": "Argumentação e pontos de vista",
+    "habilidades": [
+     21,
+     24
+    ],
+    "oficial": "Confrontar opiniões e pontos de vista sobre as diferentes linguagens e suas manifestações específicas."
+   },
+   {
+    "competencia": 8,
+    "nome": "Língua portuguesa e variação linguística",
+    "habilidades": [
+     25,
+     27
+    ],
+    "oficial": "Compreender e usar a língua portuguesa como língua materna, geradora de significação e integradora da organização do mundo e da própria identidade."
+   },
+   {
+    "competencia": 9,
+    "nome": "Tecnologias da informação na sociedade",
+    "habilidades": [
+     28,
+     30
+    ],
+    "oficial": "Entender os princípios, a natureza, a função e o impacto das tecnologias da comunicação e da informação na sua vida pessoal e social, no desenvolvimento do conhecimento, associando-o aos conhecimentos científicos, às linguagens que lhes dão suporte, às demais tecnologias, aos processos de produção e aos problemas que se propõem solucionar."
+   }
+  ],
+  "matematica": [
+   {
+    "competencia": 1,
+    "nome": "Números e operações",
+    "habilidades": [
+     1,
+     5
+    ],
+    "oficial": "Construir significados para os números naturais, inteiros, racionais e reais."
+   },
+   {
+    "competencia": 2,
+    "nome": "Geometria",
+    "habilidades": [
+     6,
+     9
+    ],
+    "oficial": "Utilizar o conhecimento geométrico para realizar a leitura e a representação da realidade e agir sobre ela."
+   },
+   {
+    "competencia": 3,
+    "nome": "Grandezas e medidas",
+    "habilidades": [
+     10,
+     14
+    ],
+    "oficial": "Construir noções de grandezas e medidas para a compreensão da realidade e a solução de problemas do cotidiano."
+   },
+   {
+    "competencia": 4,
+    "nome": "Proporcionalidade e variação",
+    "habilidades": [
+     15,
+     18
+    ],
+    "oficial": "Construir noções de variação de grandezas para a compreensão da realidade e a solução de problemas do cotidiano."
+   },
+   {
+    "competencia": 5,
+    "nome": "Álgebra e funções",
+    "habilidades": [
+     19,
+     23
+    ],
+    "oficial": "Modelar e resolver problemas que envolvem variáveis socioeconômicas ou técnico-científicas, usando representações algébricas."
+   },
+   {
+    "competencia": 6,
+    "nome": "Gráficos e tabelas",
+    "habilidades": [
+     24,
+     26
+    ],
+    "oficial": "Interpretar informações de natureza científica e social obtidas da leitura de gráficos e tabelas, realizando previsão de tendência, extrapolação, interpolação e interpretação."
+   },
+   {
+    "competencia": 7,
+    "nome": "Estatística e probabilidade",
+    "habilidades": [
+     27,
+     30
+    ],
+    "oficial": "Compreender o caráter aleatório e não-determinístico dos fenômenos naturais e sociais e utilizar instrumentos adequados para medidas, determinação de amostras e cálculos de probabilidade para interpretar informações de variáveis apresentadas em uma distribuição estatística."
+   }
+  ],
+  "ciencias-natureza": [
+   {
+    "competencia": 1,
+    "nome": "Ciência e tecnologia na história",
+    "habilidades": [
+     1,
+     4
+    ],
+    "oficial": "Compreender as ciências naturais e as tecnologias a elas associadas como construções humanas, percebendo seus papéis nos processos de produção e no desenvolvimento econômico e social da humanidade."
+   },
+   {
+    "competencia": 2,
+    "nome": "Tecnologia no dia a dia",
+    "habilidades": [
+     5,
+     7
+    ],
+    "oficial": "Identificar a presença e aplicar as tecnologias associadas às ciências naturais em diferentes contextos."
+   },
+   {
+    "competencia": 3,
+    "nome": "Meio ambiente e produção",
+    "habilidades": [
+     8,
+     12
+    ],
+    "oficial": "Associar intervenções que resultam em degradação ou conservação ambiental a processos produtivos e sociais e a instrumentos ou ações científico-tecnológicos."
+   },
+   {
+    "competencia": 4,
+    "nome": "Seres vivos, ambiente e saúde",
+    "habilidades": [
+     13,
+     16
+    ],
+    "oficial": "Compreender interações entre organismos e ambiente, em particular aquelas relacionadas à saúde humana, relacionando conhecimentos científicos, aspectos culturais e características individuais."
+   },
+   {
+    "competencia": 5,
+    "nome": "Método científico",
+    "habilidades": [
+     17,
+     19
+    ],
+    "oficial": "Entender métodos e procedimentos próprios das ciências naturais e aplicá-los em diferentes contextos."
+   },
+   {
+    "competencia": 6,
+    "nome": "Física",
+    "habilidades": [
+     20,
+     23
+    ],
+    "oficial": "Apropriar-se de conhecimentos da física para, em situações problema, interpretar, avaliar ou planejar intervenções científico- tecnológicas."
+   },
+   {
+    "competencia": 7,
+    "nome": "Química",
+    "habilidades": [
+     24,
+     27
+    ],
+    "oficial": "Apropriar-se de conhecimentos da química para, em situações problema, interpretar, avaliar ou planejar intervenções científico- tecnológicas."
+   },
+   {
+    "competencia": 8,
+    "nome": "Biologia",
+    "habilidades": [
+     28,
+     30
+    ],
+    "oficial": "Apropriar-se de conhecimentos da biologia para, em situações problema, interpretar, avaliar ou planejar intervenções científico- tecnológicas."
+   }
+  ],
+  "ciencias-humanas": [
+   {
+    "competencia": 1,
+    "nome": "Cultura e identidade",
+    "habilidades": [
+     1,
+     5
+    ],
+    "oficial": "Compreender os elementos culturais que constituem as identidades"
+   },
+   {
+    "competencia": 2,
+    "nome": "Espaço geográfico e economia",
+    "habilidades": [
+     6,
+     10
+    ],
+    "oficial": "Compreender as transformações dos espaços geográficos como produto das relações socioeconômicas e culturais de poder."
+   },
+   {
+    "competencia": 3,
+    "nome": "Instituições, poder e política",
+    "habilidades": [
+     11,
+     15
+    ],
+    "oficial": "Compreender a produção e o papel histórico das instituições sociais, políticas e econômicas, associando-as aos diferentes grupos, conflitos e movimentos sociais."
+   },
+   {
+    "competencia": 4,
+    "nome": "Trabalho, técnica e tecnologia",
+    "habilidades": [
+     16,
+     20
+    ],
+    "oficial": "Entender as transformações técnicas e tecnológicas e seu impacto nos processos de produção, no desenvolvimento do conhecimento e na vida social."
+   },
+   {
+    "competencia": 5,
+    "nome": "Cidadania e democracia",
+    "habilidades": [
+     21,
+     25
+    ],
+    "oficial": "Utilizar os conhecimentos históricos para compreender e valorizar os fundamentos da cidadania e da democracia, favorecendo uma atuação consciente do indivíduo na sociedade."
+   },
+   {
+    "competencia": 6,
+    "nome": "Sociedade e natureza",
+    "habilidades": [
+     26,
+     30
+    ],
+    "oficial": "Compreender a sociedade e a natureza, reconhecendo suas interações no espaço em diferentes contextos históricos e geográficos."
+   }
+  ]
+ }
+}

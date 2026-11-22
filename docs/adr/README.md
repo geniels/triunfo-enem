@@ -36,6 +36,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0026](0026-protecao-contra-ataques-da-web.md) | Proteção contra ataques vindos de sites da internet | Aceita |
 | [0027](0027-cadeia-de-build.md) | Cadeia de build protegida: ações fixadas, menor permissão e hash de tudo | Aceita |
 | [0028](0028-conferir-minha-prova.md) | Conferir minha prova: acertos da prova real com o gabarito oficial | Aceita |
+| [0029](0029-assunto-das-questoes.md) | Assunto das questões pela Matriz de Referência do ENEM | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

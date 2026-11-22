@@ -60,7 +60,8 @@ CREATE TABLE IF NOT EXISTS banco.alternativas (
 CREATE TABLE IF NOT EXISTS banco.questoes_tri (
     questao_id  INTEGER PRIMARY KEY REFERENCES questoes(id) ON DELETE CASCADE,
     a REAL NOT NULL, b REAL NOT NULL, c REAL NOT NULL,
-    anulada     INTEGER NOT NULL DEFAULT 0
+    anulada     INTEGER NOT NULL DEFAULT 0,
+    habilidade  INTEGER   -- H1..H30 da Matriz de Referência (assunto, ADR 0029); NULL se o INEP não informou
 );
 CREATE TABLE IF NOT EXISTS banco.tri_escala (
     ano INTEGER NOT NULL, area TEXT NOT NULL,
@@ -181,16 +182,19 @@ COLUNAS_NOVAS = {
     },
     # Resultado do simulado (acertos, nota TRI), calculado uma vez na entrega: as provas oficiais não mudam.
     "simulados": {"resultado": "TEXT"},
+    # Banco de questões de versões anteriores: sem a habilidade, a função de assunto só não aparece (ADR 0029).
+    "banco.questoes_tri": {"habilidade": "INTEGER"},
 }
 
 
 def criar_tabelas(con: sqlite3.Connection) -> None:
     con.executescript(ESQUEMA_BANCO + ESQUEMA_ALUNO)
     for tabela, colunas in COLUNAS_NOVAS.items():
-        existentes = {c[1] for c in con.execute(f"PRAGMA main.table_info({tabela})")}
+        esquema, nome_tabela = tabela.split(".") if "." in tabela else ("main", tabela)
+        existentes = {c[1] for c in con.execute(f"PRAGMA {esquema}.table_info({nome_tabela})")}
         for nome, tipo in colunas.items():
             if nome not in existentes:
-                con.execute(f"ALTER TABLE {tabela} ADD COLUMN {nome} {tipo}")
+                con.execute(f"ALTER TABLE {esquema}.{nome_tabela} ADD COLUMN {nome} {tipo}")
     con.execute("CREATE UNIQUE INDEX IF NOT EXISTS ix_alunos_nome ON alunos (nome COLLATE NOCASE)")
     con.commit()
 

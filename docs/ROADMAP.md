@@ -27,10 +27,10 @@ Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 **Revisão geral concluída** (Partes 1 a 4, versões 0.5.3 a 0.5.6). Painel do organizador por área pronto: a lista de participantes mostra o acerto de cada pessoa em cada área.
 **Fase 4 concluída** (versão 0.5.7): a turma tem tela própria (`#turma`), aberta pelo atalho "Turma" ao lado da engrenagem,
 visível só no PC de quem organiza. **Fase 5 em andamento**, na ordem: 5.1 Conferir minha prova ✅ (versão 0.5.8, ADR 0028; gabaritos do ENEM 2026) ·
-5.2 assunto das questões pela habilidade oficial (H1–H30 dos microdados) · 5.3 provas 2024/2025 (texto dos PDFs +
+5.2 assunto das questões ✅ (versão 0.5.9, ADR 0029; pacote de dados `dados-2026.2`) · 5.3 provas 2024/2025 (texto dos PDFs +
 microdados, com revisão humana) · 5.4 Raspberry Pi (servidor fixo da turma; precisa de um aparelho para testar).
 A Fase 3.3 (IA na redação) fica para depois, por decisão do autor.
-**Próximo passo:** 5.2, assunto das questões. A 3.3 (IA local) aguarda a medição de desempenho.
+**Próximo passo:** 5.3, provas 2024/2025. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -40,7 +40,7 @@ A Fase 3.3 (IA na redação) fica para depois, por decisão do autor.
 | 2 | 2.1 simulado por dia, tempo e numeração oficiais ✅ · 2.2 nota TRI com parâmetros oficiais, validada ✅ · 2.3 revisão espaçada (1/3/7/21 dias, fáceis primeiro) ✅ · 2.4 plano de estudos em ciclo ✅ | ✅ Concluída |
 | 3 | **Redação**: 3.1 temas desde 1998, editor pautado, cronômetro, linhas, salvamento ✅ · 3.2 autoavaliação pelas 5 competências e histórico ✅ · 3.3 correção por IA opcional ⏳ | ▶️ Em andamento |
 | 4 | **Modo turma** (ADR 0022): abrir turma na rede local ✅ · nome + PIN ✅ · participantes e novo PIN ✅ · painel do organizador por área ✅ · tela própria da turma ✅ | ✅ Concluída |
-| 5 | **Instalador `.exe` da edição Estudante** ✅ (v0.4.1) · atualização em 1 clique ✅ · conferir minha prova ✅ · assunto das questões ⏳ · provas 2024/2025 ⏳ · Raspberry Pi ⏳ | ▶️ Em andamento |
+| 5 | **Instalador `.exe` da edição Estudante** ✅ (v0.4.1) · atualização em 1 clique ✅ · conferir minha prova ✅ · assunto das questões ✅ · provas 2024/2025 ⏳ · Raspberry Pi ⏳ | ▶️ Em andamento |
 
 ## Decisões tomadas em 2026-11-08
 - **Duas edições** (ADR 0010): Estudante (zero administração) e Escola (configurada por um responsável).

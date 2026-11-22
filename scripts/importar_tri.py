@@ -99,6 +99,7 @@ def itens_por_prova(itens: list[dict]) -> dict[str, list[dict]]:
             "area": r["SG_AREA"], "pos": int(r["CO_POSICAO"]), "gab": r["TX_GABARITO"].strip().upper(), "item": r["CO_ITEM"],
             "a": num(r["NU_PARAM_A"]), "b": num(r["NU_PARAM_B"]), "c": num(r["NU_PARAM_C"]),
             "aban": r["IN_ITEM_ABAN"] == "1", "lingua": (r.get("TP_LINGUA") or "").strip(),
+            "hab": int(r["CO_HABILIDADE"]) if (r.get("CO_HABILIDADE") or "").strip().isdigit() else None,  # assunto (ADR 0029)
         })
     return provas
 
@@ -129,8 +130,8 @@ def casar_questoes(con, ano: int, provas: dict[str, list[dict]]) -> dict[str, tu
             resumo[sigla] = (cod, acertos, len(nossas))
             continue
         con.executemany(
-            "INSERT OR REPLACE INTO questoes_tri (questao_id, a, b, c, anulada) VALUES (?, ?, ?, ?, ?)",
-            [(qid, i["a"], i["b"], i["c"], int(i["aban"])) for qid, i in pares.items()],
+            "INSERT OR REPLACE INTO questoes_tri (questao_id, a, b, c, anulada, habilidade) VALUES (?, ?, ?, ?, ?, ?)",
+            [(qid, i["a"], i["b"], i["c"], int(i["aban"]), i["hab"]) for qid, i in pares.items()],
         )
         resumo[sigla] = (cod, acertos, len(nossas))
     return resumo

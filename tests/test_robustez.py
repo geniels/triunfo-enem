@@ -4,6 +4,7 @@ import io
 import tempfile
 import unittest
 import json
+import sqlite3
 from contextlib import contextmanager
 from datetime import date
 from pathlib import Path
@@ -112,7 +113,7 @@ class TestNotaTri(Base):
             for i in range(10):
                 self.con.execute("INSERT INTO questoes (id, ano, indice, area, gabarito) VALUES (?, ?, ?, 'matematica', 'A') "
                                  "ON CONFLICT DO NOTHING", (QS[0] + i, ANO, 140 + i))
-                self.con.execute("INSERT INTO questoes_tri VALUES (?, 1.5, 0, 0.2, ?)", (QS[0] + i, int(i < anuladas)))
+                self.con.execute("INSERT INTO questoes_tri (questao_id, a, b, c, anulada) VALUES (?, 1.5, 0, 0.2, ?)", (QS[0] + i, int(i < anuladas)))
 
     def nota(self):
         areas = {"matematica": {}}
@@ -302,3 +303,48 @@ class TestConferirProva(unittest.TestCase):
         self.assertTrue(LINHA.match("153 ANULADO"))  # 2026: antes só "ANULADA" era aceito
         self.assertIsNone(letra("ANULADO"))
         self.assertIsNone(LINHA.match("QUESTÃO GABARITO"))
+
+
+class TestAssunto(Base):
+    """ADR 0029: assunto = competência da Matriz de Referência, pela habilidade H1..H30 do INEP."""
+
+    def com_habilidades(self, habs):
+        with self.con:
+            for qid, h in zip(QS, habs):
+                self.con.execute("INSERT INTO questoes_tri (questao_id, a, b, c, anulada, habilidade) VALUES (?, 1, 0, .2, 0, ?)", (qid, h))
+
+    def test_matriz_completa(self):
+        for area, lista in main.ASSUNTOS.items():
+            habs = [h for c in lista for h in range(c["habilidades"][0], c["habilidades"][1] + 1)]
+            self.assertEqual(habs, list(range(1, 31)), area)
+        self.assertEqual(main._assunto("matematica", 7)["nome"], "Geometria")
+        self.assertIsNone(main._assunto("matematica", None))
+
+    def test_filtro_pratica_questao_e_estatisticas(self):
+        self.com_habilidades([21, 21, 25])  # Natureza: H21 = Física (C6), H25 = Química (C7)
+        f = main.filtros(self.con)["assuntos"]["ciencias-natureza"]
+        self.assertEqual([(c["nome"], c["total"]) for c in f], [("Física", 2), ("Química", 1)])
+        sortear = lambda c: main.proxima(main.PedidoProxima(area="ciencias-natureza", modo="todas", competencia=c), self.con, 1)
+        self.assertEqual(sortear(7)["id"], QS[2])
+        self.assertIn(sortear(6)["id"], QS[:2])
+        self.assertEqual(sortear(8)["id"], None)  # Biologia: nenhuma
+        self.assertEqual(main.questao(self.con, QS[2])["assunto"], "Química")
+        for qid, letra in ((QS[0], "A"), (QS[1], "C"), (QS[2], "D")):  # gabaritos B, C, D
+            main.responder(self.con, 1, main.Resposta(questao_id=qid, alternativa=letra))
+        est = {a["nome"]: (a["acertos"], a["respondidas"]) for a in main.estatisticas(self.con, 1)["assuntos"]}
+        self.assertEqual(est, {"Física": (1, 2), "Química": (1, 1)})
+        self.assertEqual(main.estatisticas(self.con, 1)["assuntos"][0]["nome"], "Física")  # o pior primeiro
+
+    def test_banco_antigo_sem_habilidade_ganha_a_coluna(self):
+        tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(tmp.cleanup)
+        pasta = Path(tmp.name)
+        velho = sqlite3.connect(pasta / "questoes.db")
+        velho.execute("CREATE TABLE questoes_tri (questao_id INTEGER PRIMARY KEY, a REAL NOT NULL, b REAL NOT NULL, "
+                      "c REAL NOT NULL, anulada INTEGER NOT NULL DEFAULT 0)")
+        velho.close()
+        con = db.conectar(pasta)
+        db.criar_tabelas(con)
+        self.assertIn("habilidade", [c[1] for c in con.execute("PRAGMA banco.table_info(questoes_tri)")])
+        self.assertEqual(main.filtros(con)["assuntos"], {})  # sem dados: a tela esconde o filtro
+        con.close()
