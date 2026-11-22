@@ -99,7 +99,7 @@ def encerrar_sessao(con: sqlite3.Connection, aluno_id: int) -> None:
 
 
 NAO_CONFERE = ("Nome ou PIN não conferem. Confira o que você digitou; se esqueceu o PIN, peça um novo a quem organiza "
-               "a turma (ou, se o computador é seu, troque em Configurações).")
+               "a turma (ou, se o computador é seu, troque na tela Turma).")
 
 
 @functools.cache

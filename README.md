@@ -110,10 +110,10 @@ Você não precisa configurar nada nem entender de computador:
 - **Painel de Desempenho completo ([veja a tela inicial](docs/imagens/inicio.png)):** acompanhe sua porcentagem de acertos e seu tempo médio por questão em cada área, descubra se você erra mais por falta de conteúdo ou falta de atenção e veja seu ritmo nos últimos 14 dias.
 - **Guia da Prova (o Edital traduzido):** horários dos portões, quais documentos digitais valem, qual caneta levar, o que elimina na hora e o que dá nota zero na redação — sempre atualizado com o edital oficial.
 - **Estude no celular/tablet ou em Turma (Wi-Fi):**
-  - **No seu celular ou tablet:** vá em *Configurações → Outros aparelhos e turma*, crie seu nome e PIN e clique em *Abrir acesso pela rede*. Digite o endereço no navegador do celular (no mesmo Wi-Fi) para estudar com o **mesmo progresso do PC**.
+  - **No seu celular ou tablet:** abra a tela **Turma** no menu, crie seu nome e PIN e clique em *Abrir acesso pela rede*. Digite o endereço no navegador do celular (no mesmo Wi-Fi) para estudar com o **mesmo progresso do PC**.
   - **Com amigos, cursinho ou escola (Modo Turma):** um computador abre a turma na rede Wi-Fi e cada estudante entra pelo próprio celular ou PC com seu nome e PIN de 4 dígitos, mantendo o progresso separado para cada pessoa. Quem organiza vê **quanto cada pessoa acerta em cada área** e gera um PIN novo para quem esquecer.
 
-  <a href="docs/imagens/turma.png"><img src="docs/imagens/turma.png" width="560" alt="Configurações com o acesso pela rede aberto: endereço para digitar no tablet e lista de participantes da turma com a porcentagem de acerto de cada um por área"></a>
+  <a href="docs/imagens/turma.png"><img src="docs/imagens/turma.png" width="560" alt="Tela Turma com o acesso pela rede aberto: endereço para digitar no tablet e lista de participantes da turma com a porcentagem de acerto de cada um por área"></a>
 - **Acessibilidade de verdade:** atalhos rápidos no teclado (`A`–`E` escolhem a alternativa, `Enter` confirma, `←` `→` mudam de questão e `M` marca para revisão), suporte a leitores de tela e selos em texto além de cores para quem tem daltonismo.
 
 ---
@@ -216,7 +216,7 @@ docs/                  Roteiro (ROADMAP.md), imagens e Registros de Decisão de 
 | **1** | Banco de questões (2009–2023), prática com filtros, rascunho com caneta, caderno de erros e painel | ✅ Pronta |
 | **2** | Simulado oficial por dia, cálculo da nota TRI, revisão espaçada e plano de estudos em ciclo | ✅ Pronta |
 | **3** | Redação: temas oficiais, folha pautada e autoavaliação ✅ · apoio por IA local opcional ⏳ | ▶️ Em andamento |
-| **4** | Modo Turma na rede Wi-Fi ✅ · acesso pelo próprio tablet/celular ✅ · painel do organizador por área ✅ · ver a turma fora das Configurações ⏳ | ▶️ Em andamento |
+| **4** | Modo Turma na rede Wi-Fi ✅ · acesso pelo próprio tablet/celular ✅ · painel do organizador por área ✅ · tela própria da turma no menu ✅ | ✅ Pronta |
 | **5** | Instalador Windows ✅ · atualização em 1 clique ✅ · provas 2024/2025 e filtro por assunto ⏳ | ▶️ Em andamento |
 
 O roteiro detalhado está em [`docs/ROADMAP.md`](docs/ROADMAP.md).

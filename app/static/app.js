@@ -73,6 +73,7 @@ const rotas = {
   plano: telaPlano,
   guia: telaGuia,
   config: telaConfig,
+  turma: telaTurma,
   questao: (id) => telaQuestaoAvulsa(Number(id)),
 };
 
@@ -1306,13 +1307,10 @@ async function telaConfig() {
         aparelhos; para voltar, é só entrar com seu nome e PIN.</p>
       <div class="acoes"><button class="botao secundario" id="sair">Sair</button></div>
     </section>` : `
-    <section class="cartao" aria-labelledby="turma-titulo">
-      <h2 id="turma-titulo">Outros aparelhos e turma</h2>
-      <p class="sub">Use o TRIunfo deste computador em outros aparelhos na mesma rede Wi-Fi: no <b>seu tablet ou
-        celular</b>, com o mesmo progresso, ou com <b>colegas</b> (escola, cursinho, amigos), cada um com o seu. Os
-        outros aparelhos entram pelo navegador, com nome e um PIN de 4 números. Tudo fica guardado só neste computador,
-        que precisa estar ligado com o TRIunfo aberto.</p>
-      <div id="turma-corpo"><p class="carregando">Carregando…</p></div>
+    <section class="cartao">
+      <h2>Outros aparelhos e turma</h2>
+      <p class="sub">Estudar no seu tablet ou celular com o mesmo progresso, ou com colegas na mesma rede Wi-Fi.</p>
+      <div class="acoes"><a class="botao secundario" href="#turma">Abrir a tela da turma</a></div>
     </section>`}
     <section class="cartao" ${eu.modo === "turma" ? "hidden" : ""}>
       <h2>Atualizações</h2>
@@ -1345,7 +1343,6 @@ async function telaConfig() {
     };
     return;
   }
-  desenharTurma(await api("/api/turma"));
   const lembrete = $("#lembrete-versao");
   lembrete.checked = (await api("/api/preferencias")).lembrete_versao;
   lembrete.onchange = () =>
@@ -1432,6 +1429,25 @@ async function mostrarLembreteVersao() {
 }
 
 /* ---------------------------- Modo turma (ADR 0022) ---------------------------- */
+
+// Tela própria da turma (antes ficava dentro das Configurações): só no PC de quem organiza.
+async function telaTurma() {
+  if (eu.modo === "turma") {
+    location.hash = "#inicio"; // quem entra pela rede não administra a turma (a API recusa com 403)
+    return;
+  }
+  const t = await api("/api/turma");
+  conteudo.innerHTML = `
+    <section class="cartao" aria-labelledby="turma-titulo">
+      <h1 id="turma-titulo">Outros aparelhos e turma</h1>
+      <p class="sub">Use o TRIunfo deste computador em outros aparelhos na mesma rede Wi-Fi: no <b>seu tablet ou
+        celular</b>, com o mesmo progresso, ou com <b>colegas</b> (escola, cursinho, amigos), cada um com o seu. Os
+        outros aparelhos entram pelo navegador, com nome e um PIN de 4 números. Tudo fica guardado só neste computador,
+        que precisa estar ligado com o TRIunfo aberto.</p>
+      <div id="turma-corpo"></div>
+    </section>`;
+  desenharTurma(t);
+}
 
 function desenharTurma(t, aviso = "") {
   const corpo = $("#turma-corpo");
@@ -1547,6 +1563,7 @@ function mostrarQuemSou() {
   const quem = $("#quem");
   quem.hidden = !eu.aluno;
   quem.textContent = eu.aluno ? `Olá, ${eu.aluno.nome}` : "";
+  $("#nav-turma").hidden = eu.modo !== "local"; // o menu "Turma" é só do PC de quem organiza
   document.body.classList.toggle("sem-login", eu.modo === "turma" && !eu.aluno);
 }
 
@@ -1563,7 +1580,7 @@ function telaEntrar() {
       <img src="/static/icone.svg" alt="" width="64" height="64">
       <h1>Entrar no TRIunfo</h1>
       <p class="sub">Entre com seu nome e um PIN de 4 números para guardar o seu progresso. Se o computador é seu, use o
-        nome e o PIN que você criou em Configurações. Este aparelho fica lembrado.</p>
+        nome e o PIN que você criou na tela Turma. Este aparelho fica lembrado.</p>
       <fieldset><legend>Você já entrou antes?</legend>
         <div class="chips" id="e-modo">
           <button type="button" data-v="nao" class="ativo" aria-pressed="true">Já tenho acesso</button>
@@ -1583,7 +1600,7 @@ function telaEntrar() {
             <input id="e-pin2" type="password" inputmode="numeric" maxlength="4" autocomplete="off">
           </label>
         </div>
-        <p class="sub" id="e-dica">Esqueceu o PIN? Peça um novo a quem organiza a turma ou, se o computador é seu, troque em Configurações.</p>
+        <p class="sub" id="e-dica">Esqueceu o PIN? Peça um novo a quem organiza a turma ou, se o computador é seu, troque na tela Turma.</p>
         <div class="acoes"><button class="botao" type="submit" id="e-botao">Entrar</button></div>
         <div id="e-erro" class="retorno nao" role="alert" hidden></div>
       </form>
@@ -1602,7 +1619,7 @@ function telaEntrar() {
     $("#e-botao").textContent = primeira ? "Criar meu acesso" : "Entrar";
     $("#e-dica").textContent = primeira
       ? "Use nome e sobrenome, como os colegas conhecem você. Escolha um PIN fácil de lembrar e não conte para ninguém."
-      : "Esqueceu o PIN? Peça um novo a quem organiza a turma ou, se o computador é seu, troque em Configurações.";
+      : "Esqueceu o PIN? Peça um novo a quem organiza a turma ou, se o computador é seu, troque na tela Turma.";
     $("#e-erro").hidden = true;
   };
 

@@ -24,7 +24,10 @@ O rascunho fica salvo no `aluno.db` e volta na prática, no caderno de erros e n
 Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 **Lembrete de versão nova** na tela inicial, com consulta diária desligável (ADR 0024).
 **Tablet do próprio estudante** com o mesmo progresso do PC (ADR 0025). Versão **0.5.2** (lembrete + tablet).
-**Revisão geral concluída** (Partes 1 a 4, versões 0.5.3 a 0.5.6). Painel do organizador por área pronto: a lista de participantes mostra o acerto de cada pessoa em cada área. **Próximo passo:** ver a turma sem precisar abrir as Configurações. A 3.3 (IA local) aguarda a medição de desempenho.
+**Revisão geral concluída** (Partes 1 a 4, versões 0.5.3 a 0.5.6). Painel do organizador por área pronto: a lista de participantes mostra o acerto de cada pessoa em cada área.
+**Fase 4 concluída** (versão 0.5.7): a turma tem tela própria (`#turma`), aberta pelo atalho "Turma" ao lado da engrenagem,
+visível só no PC de quem organiza. **Próximo passo:** escolher entre a Fase 3.3 (IA local, aguarda medição) e a Fase 5
+(provas 2024/2025, filtro por assunto). A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
@@ -33,7 +36,7 @@ Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 | 1 | Banco de questões 2009–2023, prática com filtros, cronômetro, motivo do erro, caderno de erros, painel | ✅ Concluída |
 | 2 | 2.1 simulado por dia, tempo e numeração oficiais ✅ · 2.2 nota TRI com parâmetros oficiais, validada ✅ · 2.3 revisão espaçada (1/3/7/21 dias, fáceis primeiro) ✅ · 2.4 plano de estudos em ciclo ✅ | ✅ Concluída |
 | 3 | **Redação**: 3.1 temas desde 1998, editor pautado, cronômetro, linhas, salvamento ✅ · 3.2 autoavaliação pelas 5 competências e histórico ✅ · 3.3 correção por IA opcional ⏳ | ▶️ Em andamento |
-| 4 | **Modo turma** (ADR 0022): abrir turma na rede local ✅ · nome + PIN ✅ · participantes e novo PIN ✅ · painel do organizador por área ✅ · ver a turma fora das Configurações ⏳ | ▶️ Em andamento |
+| 4 | **Modo turma** (ADR 0022): abrir turma na rede local ✅ · nome + PIN ✅ · participantes e novo PIN ✅ · painel do organizador por área ✅ · tela própria da turma ✅ | ✅ Concluída |
 | 5 | **Instalador `.exe` da edição Estudante** ✅ (v0.4.1) · atualização em 1 clique ✅ · provas 2024/2025; classificação por assunto; Raspberry Pi | ⏳ |
 
 ## Decisões tomadas em 2026-11-08

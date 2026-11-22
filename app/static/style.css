@@ -62,7 +62,7 @@ h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
 /* Topo */
 .topo {
   position: sticky; top: 0; z-index: 10;
-  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.5rem;
+  display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1rem;
   padding: .75rem max(16px, calc((100% - 928px) / 2));
   background: var(--cartao); border-bottom: 1px solid var(--linha);
 }
@@ -73,7 +73,7 @@ h2 { font-size: 1.05rem; margin: 0 0 .75rem; }
 .topo::after { content: ""; position: absolute; left: 0; right: 0; bottom: -4px; height: 4px;
   background: linear-gradient(90deg, #1f4fb8 0 25%, #ffc61a 25% 50%, #dfe3ea 50% 75%, #f39cc0 75%); }
 nav { display: flex; flex-wrap: wrap; gap: .25rem; }
-nav a { padding: .35rem .7rem; border-radius: 999px; text-decoration: none; color: var(--suave); }
+nav a { padding: .35rem .55rem; border-radius: 999px; text-decoration: none; color: var(--suave); }
 nav a:hover { background: var(--fundo); }
 nav a.ativo { background: var(--primaria); color: var(--primaria-texto); }
 
@@ -381,3 +381,10 @@ body:has(.rascunho-barra:not([hidden])) .conteudo { padding-bottom: 5.5rem; }
   background: var(--cartao); color: var(--texto); min-width: 0; }
 .meu-acesso .campos label { flex: 1 1 9rem; }
 .meu-acesso .acoes { flex-basis: 100%; margin-top: 0; }
+
+/* Atalho da tela Turma, ao lado da engrenagem (só no PC de quem organiza) */
+.atalho-turma { margin-left: auto; display: inline-flex; align-items: center; gap: .35rem; padding: .35rem .8rem;
+  border-radius: 999px; text-decoration: none; color: var(--suave); }
+.atalho-turma:hover { background: var(--fundo); color: var(--texto); }
+.atalho-turma.ativo { background: var(--primaria); color: var(--primaria-texto); }
+.atalho-turma:not([hidden]) ~ .engrenagem { margin-left: 0; }

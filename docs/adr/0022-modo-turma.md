@@ -46,3 +46,6 @@ ADR 0011).
 - Redes Wi-Fi com "isolamento de clientes" (comum em redes de visitante) impedem os aparelhos de se enxergarem. A
   mensagem de erro da tela de entrada lembra de conferir o Wi-Fi.
 - Próximos passos: painel do organizador por área e por pessoa; ver a turma sem precisar abrir as Configurações.
+  Ambos feitos: o painel mostra o acerto de cada pessoa por área, e a turma tem tela própria (`#turma`). O atalho
+  "Turma" fica ao lado da engrenagem, e não no menu, porque no celular mais um item deixava o cabeçalho fixo com 3
+  linhas. Ele só aparece no PC de quem organiza.
