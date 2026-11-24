@@ -23,11 +23,17 @@ from pathlib import Path
 import pypdfium2 as pdfium
 import pypdfium2.raw as raw
 
-TOPO_REL, BASE_REL = 56, 30     # cabeçalho e rodapé (pontos, a partir da margem de corte da página)
+TOPO_REL, BASE_REL = 56, 30     # cabeçalho e rodapé (pontos, a partir da margem de corte da página); o topo
+                                # de cada caderno é medido em extrair(): o de 2025 é mais alto que o de 2024
 MARGEM_DIREITA = 12             # linha que termina a menos disso da borda da coluna foi quebrada pelo layout
 RUIDO = re.compile(r"^\*\w+\*$|ENEM\s?20\d\dENEM|^\d+$|•\s*\d+º DIA\s*•|CADERNO \d+ • ")
-CABECALHO = re.compile(r"^(QUESTÃO \d{2,3}|Questões de \d{2} a \d{2}.*|LINGUAGENS, CÓDIGOS.*|CIÊNCIAS (HUMANAS|DA NATUREZA).*|"
+CABECALHO = re.compile(r"^((?i:QUEST ?ÃO) \d{2,3}|Questões de \d{2,3} a \d{2,3}.*|LINGUAGENS, CÓDIGOS.*|CIÊNCIAS (HUMANAS|DA NATUREZA).*|"
                        r"MATEMÁTICA E SUAS TECNOLOGIAS.*)$")
+
+
+FIM_DE_BLOCO = re.compile(r"^(LINGUAGENS, CÓDIGOS E SUAS TECNOLOGIAS|CIÊNCIAS HUMANAS E SUAS TECNOLOGIAS|"
+                          r"CIÊNCIAS DA NATUREZA E SUAS TECNOLOGIAS|MATEMÁTICA E SUAS TECNOLOGIAS|"
+                          r"INSTRUÇÕES PARA A REDAÇÃO)$")
 
 
 def area(pagina):
@@ -36,15 +42,42 @@ def area(pagina):
     return pagina.get_cropbox()
 
 
-def colunas(pagina) -> list[tuple[float, float]]:
+def vao_no_meio(pagina, y_topo, y_base) -> int:
+    """Maior faixa (em pt) sem letras perto do meio da página, entre y_base e y_topo. Duas colunas deixam um vão de
+    uns 9 pt ou mais; texto de largura inteira não deixa nenhum."""
     esq, _, dir_, _ = area(pagina)
     meio = (esq + dir_) / 2
+    tp = pagina.get_textpage()
+    ocupado = [0] * 31  # quantas letras cobrem cada ponto de meio-15 a meio+15
+    for i in range(tp.count_chars()):
+        l, b, r, t = tp.get_charbox(i)
+        # Só letras de tamanho normal: em 2024, o separador das colunas é um microtexto vertical bem no meio
+        if r - l > 2 and y_base < b < y_topo and tp.get_text_range(i, 1).strip():
+            for k in range(max(int(l - meio + 15), 0), min(int(r - meio + 15) + 1, 31)):
+                ocupado[k] += 1
+    vao = maior = 0
+    for n in ocupado:  # quase sem letra: rótulos de figura deixam uma ou outra
+        vao = vao + 1 if n <= 1 else 0
+        maior = max(maior, vao)
+    return maior
+
+
+def colunas(pagina) -> list[tuple[float, float]]:
+    """Duas colunas; ou uma só, quando o texto atravessa o meio da página (em 2024 e 2025, há páginas de largura
+    inteira, como o texto das questões 06 a 10 de 2025)."""
+    esq, _, dir_, _ = area(pagina)
+    meio = (esq + dir_) / 2
+    topo, base = faixa_util(pagina)
+    # shortcut: página metade de largura inteira e metade em colunas sai como uma coluna só; em 2024/2025, só a da
+    # redação, que não é questão
+    if vao_no_meio(pagina, topo, base) < 5:
+        return [(esq, dir_ - 25)]
     return [(esq, meio - 2), (meio + 2, dir_ - 25)]  # à direita, uma faixa decorativa
 
 
-def faixa_util(pagina) -> tuple[float, float]:
+def faixa_util(pagina, topo_rel=TOPO_REL) -> tuple[float, float]:
     _, base, _, topo = area(pagina)
-    return topo - TOPO_REL, base + BASE_REL
+    return topo - topo_rel, base + BASE_REL
 
 
 SOBRE = str.maketrans("0123456789+-−=()ni", "⁰¹²³⁴⁵⁶⁷⁸⁹⁺⁻⁻⁼⁽⁾ⁿⁱ")
@@ -83,18 +116,31 @@ def linhas_da_regiao(tp, x0, x1, y_topo, y_base):
     pequena = lambda c: c[3].strip() and c[6] - c[5] < 0.8 * normal  # noqa: E731
     linhas = []
     for c in letras:  # mesma linha: altura a até 3 pt da média da linha
-        if pequena(c):
+        if pequena(c) or not c[3].strip():
             continue
         if linhas and abs(c[0] - sum(x[0] for x in linhas[-1]) / len(linhas[-1])) <= 3:
             linhas[-1].append(c)
         else:
             linhas.append([c])
-    for c in (c for c in letras if pequena(c)):
-        dona = next((ln for ln in linhas if min(x[5] for x in ln) - 1 <= c[0] <= max(x[6] for x in ln) + 1
-                     and min(x[1] for x in ln) - 20 <= c[1] <= max(x[2] for x in ln) + 20), None)
+    for c in (c for c in letras if pequena(c) or not c[3].strip()):
+        # Espaços também entram depois: sozinhos, formavam uma linha que roubava as letras pequenas da citação
+        # ("SARTORI" virava "TORI … SAR"). Entre as linhas possíveis (as de 2025 são mais juntas, e um expoente cabe
+        # na altura de duas), vale a que não tem letra embaixo dele; antes, "mol⁻¹" da linha de baixo ia parar em
+        # "mo₋₁lar", na de cima.
+        perto = lambda ln: abs(c[0] - sum(x[0] for x in ln) / len(ln))  # noqa: E731
+        # Mesma altura: a citação inteira em letra pequena, com um "." de tamanho normal no meio, é uma linha só
+        mesma_altura = [ln for ln in linhas if perto(ln) <= 3 and any(x[3].strip() for x in ln)]
+        candidatas = [ln for ln in linhas if min(x[5] for x in ln) - 1 <= c[0] <= max(x[6] for x in ln) + 1
+                      and min(x[1] for x in ln) - 20 <= c[1] <= max(x[2] for x in ln) + 20]
+        livres = [ln for ln in candidatas
+                  if not any(x[3].strip() and c[1] < x[2] - 0.5 and x[1] < c[2] - 0.5 for x in ln)]
+        if mesma_altura or not c[3].strip():
+            dona = min(mesma_altura, key=perto, default=None)
+        else:  # expoente ou índice: fora do meio da linha
+            dona = min(livres or candidatas, key=perto, default=None)
         if dona:
             dona.append(c)
-        else:
+        elif c[3].strip():  # espaço sem linha fica de fora (sozinho, atraía os índices de várias fórmulas: "2 2 2")
             linhas.append([c])  # letra pequena sozinha (rótulo): linha própria
     linhas.sort(key=lambda ln: -max(x[0] for x in ln))
     saida = []
@@ -165,7 +211,9 @@ def figuras_da_regiao(pagina, x0, x1, y_topo, y_base):
     # Fica: o que tem forma cheia (imagem, gráfico) ou é grade de filetes (tabela); some o filete solto (separador,
     # sublinhado, a barra ao lado de "QUESTÃO"). Menores que 30x30 pt são enfeite.
     # Imagem rasterizada fica mesmo pequena (as setas de alternativa têm 64x8 pt); desenho pequeno é enfeite.
-    return [c[:4] for c in caixas if (c[4] or (c[5] >= 2 and c[6] >= 2)) and (c[7] or (c[2] - c[0]) * (c[3] - c[1]) > 900)]
+    # Faixa fina e comprida (a barra ao lado de "QUESTÃO" nas páginas de largura inteira, em 2025) também é enfeite.
+    return [c[:4] for c in caixas if (c[4] or (c[5] >= 2 and c[6] >= 2)) and (c[7] or (c[2] - c[0]) * (c[3] - c[1]) > 900)
+            and not (not c[7] and c[3] - c[1] < 10 and c[2] - c[0] > 15 * (c[3] - c[1]))]
 
 
 def desenhos_no_texto(pagina, linhas, caixas, x0, x1) -> int:
@@ -263,10 +311,19 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
                     idioma = "espanhol"
                 elif "opção inglês" in texto:
                     idioma = "ingles"
-                m = re.match(r"QUESTÃO (\d{2,3})", texto)
+                comum = re.match(r"Texto para as Quest.es de (\d{2,3}) a (\d{2,3})", texto)
+                if comum:  # texto de várias questões: vira print e entra no começo de cada uma (ver o fim de extrair)
+                    marcas.append({"n": int(comum.group(1)), "ate": int(comum.group(2)), "idioma": "comum",
+                                   "pagina": np_, "coluna": ci, "y": y})
+                if FIM_DE_BLOCO.match(texto):  # título de área ou página da redação: a questão anterior termina aqui
+                    marcas.append({"n": 0, "idioma": "fim", "pagina": np_, "coluna": ci, "y": y})
+                m = re.match(r"QUEST ?ÃO (\d{2,3})", texto, re.I)  # 2025: "Quest ão", em versalete
                 if m:
                     n = int(m.group(1))
                     marcas.append({"n": n, "idioma": idioma if n <= 5 else "", "pagina": np_, "coluna": ci, "y": y})
+    # A área útil começa logo acima da marca "QUESTÃO" mais alta das páginas (o cabeçalho muda de um ano para outro)
+    questoes_ = [m for m in marcas if m["n"]]
+    topo_rel = min(area(pdf[m["pagina"]])[3] - m["y"] for m in questoes_) - 10 if questoes_ else TOPO_REL
     # 2. Região de cada questão: do cabeçalho até o próximo, atravessando colunas e páginas
     questoes = []
     for k, m in enumerate(marcas):
@@ -276,16 +333,17 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
         trechos, (p, c, y) = [], (m["pagina"], m["coluna"], m["y"] + 8)
         while True:
             if fim and (p, c) == (fim["pagina"], fim["coluna"]):
-                trechos.append((p, c, y, fim["y"] + 8))
+                if fim["y"] + 8 < y:  # a próxima marca no topo da coluna (ex.: página da redação): nada a pegar aqui
+                    trechos.append((p, c, y, fim["y"] + 8))
                 break
-            trechos.append((p, c, y, faixa_util(pdf[p])[1]))
-            p, c = (p, 1) if c == 0 else (p + 1, 0)
+            trechos.append((p, c, y, faixa_util(pdf[p], topo_rel)[1]))
+            p, c = (p, c + 1) if c + 1 < len(colunas(pdf[p])) else (p + 1, 0)
             if p < len(pdf):
-                y = faixa_util(pdf[p])[0]  # continuação: só a área útil (antes, o logotipo do cabeçalho entrava)
+                y = faixa_util(pdf[p], topo_rel)[0]  # continuação: só a área útil (antes, o logotipo do cabeçalho entrava)
             if p >= len(pdf) or (not fim and p > m["pagina"] + 1):
                 break
         itens, figuras = [], []
-        originais, desenhos, perdidas, limites = [], 0, 0, []
+        originais, desenhos, perdidas, cortadas, limites = [], 0, 0, 0, []
         for p, c, y_topo, y_base in trechos:
             pagina = pdf[p]
             x0, x1 = colunas(pagina)[c]
@@ -296,6 +354,8 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
             if limites and not texto_util:  # continuação sem texto: a questão acabou (a última iria até a contracapa)
                 break
             desenhos += desenhos_no_texto(pagina, texto_util, caixas, x0, x1)
+            if len(colunas(pagina)) == 2:
+                cortadas += vao_no_meio(pagina, y_topo, y_base) < 5  # rede de segurança: texto cortado no meio
             for o in pagina.get_objects(max_depth=2):  # rede de segurança: imagem da região que não virou figura
                 if o.type == raw.FPDF_PAGEOBJ_IMAGE:
                     l, b, r, t = o.get_bounds()
@@ -337,13 +397,21 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
             pagina.render(scale=1.6, crop=(x0 - esq, max(y_base - base_p - 4, 0), dir_ - x1, max(topo_p - y_topo, 0))).to_pil().save(saida / nome)
             originais.append(nome)
         questoes.append({"numero": m["n"], "idioma": m["idioma"], "blocos": blocos, "figuras": figuras,
-                         "originais": originais, "pagina": m["pagina"] + 1, "desenhos": desenhos, "perdidas": perdidas,
-                         "trechos": [(p, c, *lim) for (p, c, _, _), lim in zip(trechos, limites) if lim]})
+                         "originais": originais, "pagina": m["pagina"] + 1, "desenhos": desenhos, "perdidas": perdidas, "cortadas": cortadas,
+                         "trechos": [(p, c, *lim) for (p, c, _, _), lim in zip(trechos, limites) if lim],
+                         **({"ate": m["ate"]} if "ate" in m else {})})
     questoes = [separar_alternativas(q) for q in questoes]
     for q in questoes:
         trechos = q.pop("trechos")
-        if q["avisos"]:
+        if q["avisos"]:  # o texto comum não tem alternativas, então sempre cai aqui
             usar_print(pdf, saida, q, trechos)
+    for comum in [q for q in questoes if q["idioma"] == "comum"]:
+        questoes.remove(comum)
+        for q in questoes:
+            if comum["numero"] <= q["numero"] <= comum["ate"]:
+                q["contexto"] = f"{comum['contexto']}\n\n{q['contexto']}".strip()
+                q["figuras"] = comum["figuras"] + q["figuras"]
+                q["originais"] = comum["originais"] + q["originais"]
     return questoes
 
 
@@ -408,6 +476,8 @@ def separar_alternativas(q: dict) -> dict:
         q["avisos"].append(f"alternativas encontradas: {''.join(sorted(alts)) or 'nenhuma'}")
     if q["introducao"].startswith("![") or not q["introducao"]:
         q["avisos"].append("enunciado não identificado")
+    if q.pop("cortadas", 0):
+        q["avisos"].append("texto atravessa as colunas (página de largura inteira?): conferir com o original")
     if q.pop("perdidas", 0):
         q["avisos"].append("figura possivelmente perdida: conferir com o original")
     if q.pop("desenhos", 0):
