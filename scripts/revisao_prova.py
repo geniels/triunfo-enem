@@ -34,23 +34,24 @@ h1 { margin: .2rem 0 1rem; } .resumo { margin-bottom: 1rem; }
 .alternativas li { border: 1px solid #e1e4ea; border-radius: 8px; padding: .4rem .6rem; margin: .3rem 0; }
 .alternativas li.certa { border: 2px solid #157a3f; background: #e5f5eb; }
 .avisos { color: #c2410c; font-weight: 700; }
+.q.print { border: 3px solid #1d4ed8; } .selo-print { color: #1d4ed8; font-weight: 700; }
 .enunciado { font-weight: 600; }
 @media (max-width: 800px) { .q { grid-template-columns: 1fr; } }
 </style></head><body>
 <h1>Revisão do piloto: ENEM __ANO__, __DIA__º dia</h1>
 <p class="resumo">__RESUMO__ À esquerda, o caderno do INEP; à direita, como a questão aparece no TRIunfo. A
-alternativa em verde é o gabarito oficial. Questões com borda laranja têm aviso do extrator.</p>
+alternativa em verde é o gabarito oficial. Borda azul: a questão entra como print do caderno (o texto extraído fica só como descrição para leitor de tela). Borda laranja: aviso sem print.</p>
 <div id="lista"></div>
 <script src="markdown.js"></script>
 <script>
 const questoes = __DADOS__;
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 document.getElementById("lista").innerHTML = questoes.map((q) => `
-  <section class="q ${q.avisos.length ? "aviso" : ""}">
+  <section class="q ${q.print ? "print" : q.avisos.length ? "aviso" : ""}">
     <h2>Questão ${q.numero}${q.idioma ? " (" + q.idioma + ")" : ""} · página ${q.pagina} · gabarito ${esc(q.gabarito ?? "?")}</h2>
     <div class="original">${q.originais.map((o) => `<img src="${o}" alt="Recorte do caderno">`).join("")}</div>
     <div class="extraida">
-      ${q.avisos.length ? `<p class="avisos">${q.avisos.map(esc).join("<br>")}</p>` : ""}
+      ${q.print ? `<p class="selo-print">Entra como print. Motivo: ${q.avisos.map(esc).join("; ")}</p>` : q.avisos.length ? `<p class="avisos">${q.avisos.map(esc).join("<br>")}</p>` : ""}
       ${markdown(q.contexto)}
       <div class="enunciado">${markdown(q.introducao)}</div>
       <ol class="alternativas">${q.alternativas.map((a) => `<li class="${a.letra === q.gabarito ? "certa" : ""}">
@@ -79,8 +80,8 @@ def main() -> None:
     # O markdown.js só aceita imagens de /imagens/ (ADR 0026); aqui elas ficam ao lado da página.
     js = (pasta / "markdown.js").read_text(encoding="utf-8").replace('if (!url.startsWith("/imagens/"))', "if (false)")
     (pasta / "markdown.js").write_text(js, encoding="utf-8")
-    com_aviso = sum(1 for q in questoes if q["avisos"])
-    resumo = f"{len(questoes)} questões; {len(questoes) - com_aviso} com a estrutura completa e {com_aviso} com aviso."
+    com_print = sum(1 for q in questoes if q.get("print"))
+    resumo = f"{len(questoes)} questões: {len(questoes) - com_print} em texto e {com_print} como print do caderno."
     pagina = (PAGINA.replace("__ANO__", str(ano)).replace("__DIA__", str(dia)).replace("__RESUMO__", html.escape(resumo))
               .replace("__DADOS__", json.dumps(questoes, ensure_ascii=False).replace("</", "<\\/")))
     (pasta / "revisao.html").write_text(pagina, encoding="utf-8")

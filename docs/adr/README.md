@@ -37,6 +37,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0027](0027-cadeia-de-build.md) | Cadeia de build protegida: ações fixadas, menor permissão e hash de tudo | Aceita |
 | [0028](0028-conferir-minha-prova.md) | Conferir minha prova: acertos da prova real com o gabarito oficial | Aceita |
 | [0029](0029-assunto-das-questoes.md) | Assunto das questões pela Matriz de Referência do ENEM | Aceita |
+| [0030](0030-questoes-mistas-texto-e-print.md) | Provas novas: texto quando a extração é segura, print do caderno quando não é | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

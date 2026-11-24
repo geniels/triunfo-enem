@@ -37,8 +37,11 @@ fica no TRIunfo, com o gabarito). Caderno Azul 2024: 1º dia, 17 de 17 sem aviso
 Resolvidos no piloto: colunas e margem de corte, espaços em negrito, marcador da alternativa, parágrafos e versos,
 fonte do texto, expoentes e índices (2¹⁹, H₂O), tabelas como uma imagem com o texto na descrição, figuras largas,
 continuação de página e uma rede de segurança para figura perdida.
-**Próximo passo:** o autor avalia as páginas de revisão; depois, alternativas em imagem, juntar com gabarito, TRI e
-assunto dos microdados e a revisão humana das questões. A 3.3 (IA local) aguarda a medição de desempenho.
+**Formato misto** (ADR 0030, sugestão do autor): questão com aviso entra como **print do caderno** (texto extraído como
+descrição para leitor de tela, botões A–E só com a letra); as demais, em texto. 2º dia de 2024: 74 em texto e 16 em
+print (~3 MB). O extrator parou de recortar enfeites da margem como figura (20 questões) e a contracapa na última.
+**Próximo passo:** rodar o 1º dia inteiro (13–90); juntar com gabarito, TRI e assunto dos microdados de 2024; levar
+as questões para o banco (com o print) e fazer a tela de revisão humana; repetir para 2025. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 

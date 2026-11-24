@@ -9,6 +9,8 @@ Como funciona: o caderno tem duas colunas. Cada questão começa em "QUESTÃO NN
 ordem de leitura (coluna esquerda, coluna direita, próxima página). O texto é montado letra a letra com a posição
 de cada uma: linha que chega à margem foi quebrada pelo layout e se junta à seguinte; linha curta é fim de
 parágrafo ou verso. Figuras (imagens e desenhos vetoriais) são recortadas da página e entram no ponto do texto.
+Questão com aviso (raiz ou fração desenhada, alternativas em imagem) sai como print do caderno, com o texto
+extraído como descrição (ADR 0030).
 """
 from __future__ import annotations
 
@@ -136,6 +138,8 @@ def figuras_da_regiao(pagina, x0, x1, y_topo, y_base):
         l, b, r, t = o.get_bounds()
         # Pelo centro: figuras largas passam um pouco da margem da coluna (antes, sumiam sem aviso).
         if not (x0 <= (l + r) / 2 <= x1 and y_base <= (b + t) / 2 <= y_topo):
+            continue
+        if t > y_topo + 15 or b < y_base - 15:  # passa do cabeçalho ou da próxima questão: faixa decorativa da página
             continue
         l, r = max(l, x0 - 15), min(r, x1 + 15)  # sem invadir a outra coluna
         imagem = o.type == raw.FPDF_PAGEOBJ_IMAGE
@@ -281,7 +285,7 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
             if p >= len(pdf) or (not fim and p > m["pagina"] + 1):
                 break
         itens, figuras = [], []
-        originais, desenhos, perdidas = [], 0, 0
+        originais, desenhos, perdidas, limites = [], 0, 0, []
         for p, c, y_topo, y_base in trechos:
             pagina = pdf[p]
             x0, x1 = colunas(pagina)[c]
@@ -289,6 +293,8 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
             caixas = figuras_da_regiao(pagina, x0, x1, y_topo, y_base)
             texto_util = [ln for ln in linhas_da_regiao(tp, x0, x1, y_topo, y_base)  # sem rodapé e cabeçalho (logotipos)
                           if ln[4] or not (RUIDO.search(ln[3]) or CABECALHO.match(ln[3]))]
+            if limites and not texto_util:  # continuação sem texto: a questão acabou (a última iria até a contracapa)
+                break
             desenhos += desenhos_no_texto(pagina, texto_util, caixas, x0, x1)
             for o in pagina.get_objects(max_depth=2):  # rede de segurança: imagem da região que não virou figura
                 if o.type == raw.FPDF_PAGEOBJ_IMAGE:
@@ -317,6 +323,9 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
                 dentro_dela = [ln[3] for ln in linhas if b[0] - 1 <= ln[1] and ln[2] <= b[2] + 1 and b[1] - 1 <= ln[0] <= b[3] + 1]
                 descricao = re.sub(r"[\[\]()]", "", " · ".join(dentro_dela))[:400] or "Figura da questão"
                 entradas.append((b[3], ("figura", f"![{descricao}](/imagens/{nome})")))
+            # Onde termina o conteúdo deste trecho (o print não leva linha separadora nem contracapa)
+            fundos = [e[1][0] == "texto" and e[0] - 7 for e in entradas] + [b[1] for b in caixas]
+            limites.append((y_topo, min(f for f in fundos if f is not False)) if entradas else None)
             entradas.sort(key=lambda e: -e[0])
             itens += [e[1] for e in entradas]
         blocos = montar_paragrafos(itens)
@@ -328,8 +337,54 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
             pagina.render(scale=1.6, crop=(x0 - esq, max(y_base - base_p - 4, 0), dir_ - x1, max(topo_p - y_topo, 0))).to_pil().save(saida / nome)
             originais.append(nome)
         questoes.append({"numero": m["n"], "idioma": m["idioma"], "blocos": blocos, "figuras": figuras,
-                         "originais": originais, "pagina": m["pagina"] + 1, "desenhos": desenhos, "perdidas": perdidas})
-    return [separar_alternativas(q) for q in questoes]
+                         "originais": originais, "pagina": m["pagina"] + 1, "desenhos": desenhos, "perdidas": perdidas,
+                         "trechos": [(p, c, *lim) for (p, c, _, _), lim in zip(trechos, limites) if lim]})
+    questoes = [separar_alternativas(q) for q in questoes]
+    for q in questoes:
+        trechos = q.pop("trechos")
+        if q["avisos"]:
+            usar_print(pdf, saida, q, trechos)
+    return questoes
+
+
+def texto_plano(md: str) -> str:
+    """Markdown da questão em texto corrido, para a descrição do print (sem colchetes e parênteses, que fechariam
+    a imagem no markdown.js)."""
+    md = re.sub(r"!\[([^\[\]]*)\]\([^()\s]*\)", r" Figura: \1. ", md)
+    return re.sub(r"\s+", " ", re.sub(r"[\[\]()*_]", "", md)).strip()
+
+
+def usar_print(pdf, saida: Path, q: dict, trechos) -> None:
+    """Questão com aviso (raiz ou fração desenhada, alternativas em imagem): entra como print do caderno, que mostra
+    exatamente o original. O texto extraído vira a descrição para o leitor de tela (ADR 0005), e os botões A-E
+    ficam só com a letra, porque as alternativas já estão no print (ADR 0030)."""
+    from PIL import ImageOps
+
+    descricao = texto_plano(" ".join([q["contexto"], q["introducao"]]
+                                     + [f"Alternativa {a['letra']}: {a['texto']}" for a in q["alternativas"]]))
+    for nome in q["figuras"]:  # os recortes das figuras já estão dentro do print
+        (saida / nome).unlink(missing_ok=True)
+    prints = []
+    for i, (p, c, y_topo, y_base) in enumerate(trechos):
+        pagina = pdf[p]
+        x0, x1 = colunas(pagina)[c]
+        esq, base_p, dir_, topo_p = area(pagina)
+        if i == 0:
+            y_topo -= 15  # começa abaixo de "QUESTÃO NN": o app mostra o número
+        img = pagina.render(scale=2, crop=(x0 - esq, max(y_base - 3 - base_p, 0), dir_ - x1, max(topo_p - y_topo, 0))).to_pil()
+        caixa = ImageOps.invert(img.convert("L")).point(lambda v: 255 if v > 24 else 0).getbbox()
+        if not caixa:  # trecho em branco (a questão terminou no fim da coluna)
+            continue
+        img = img.crop((max(caixa[0] - 8, 0), max(caixa[1] - 8, 0), min(caixa[2] + 8, img.width), min(caixa[3] + 8, img.height)))
+        nome = f"{q['numero']:03d}{q['idioma'][:2]}-print-{i + 1}.png"
+        img.save(saida / nome, optimize=True)
+        prints.append(nome)
+    q["figuras"] = prints
+    q["contexto"] = "\n\n".join(f"![{descricao if k == 0 else 'Continuação da questão'}](/imagens/{n})"
+                                for k, n in enumerate(prints))
+    q["introducao"] = ""
+    q["alternativas"] = [{"letra": letra, "texto": ""} for letra in "ABCDE"]
+    q["print"] = True
 
 
 def separar_alternativas(q: dict) -> dict:
