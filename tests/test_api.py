@@ -195,11 +195,17 @@ class TestProtecaoWeb(unittest.TestCase):
         r = urllib.request.Request(f"http://127.0.0.1:8799{caminho}", method=metodo,
                                    data=json.dumps(corpo).encode() if corpo is not None else None,
                                    headers={"Content-Type": "application/json", **cabecalhos})
-        try:
-            with urllib.request.urlopen(r) as x:
-                return x.status, dict(x.headers)
-        except urllib.error.HTTPError as e:
-            return e.code, dict(e.headers)
+        for tentativa in range(3):
+            try:
+                with urllib.request.urlopen(r) as x:
+                    return x.status, dict(x.headers)
+            except urllib.error.HTTPError as e:
+                return e.code, dict(e.headers)
+            except ConnectionResetError:
+                # No Windows, a recusa (403) antes de o servidor ler o corpo às vezes chega como conexão derrubada,
+                # e não como resposta: o pedido foi barrado do mesmo jeito; repete para ler o código.
+                if tentativa == 2:
+                    raise
 
     def test_dns_rebinding_recusado(self):
         self.assertEqual(self.pedir("GET", "/api/estatisticas", Host="ataque.exemplo:8799")[0], 400)
