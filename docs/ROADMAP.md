@@ -30,7 +30,15 @@ visível só no PC de quem organiza. **Fase 5 em andamento**, na ordem: 5.1 Conf
 5.2 assunto das questões ✅ (versão 0.5.9, ADR 0029; pacote de dados `dados-2026.2`) · 5.3 provas 2024/2025 (texto dos PDFs +
 microdados, com revisão humana) · 5.4 Raspberry Pi (servidor fixo da turma; precisa de um aparelho para testar).
 A Fase 3.3 (IA na redação) fica para depois, por decisão do autor.
-**Próximo passo:** 5.3, provas 2024/2025. A 3.3 (IA local) aguarda a medição de desempenho.
+**5.3 em piloto** (2026-11-24): `scripts/importar_prova_pdf.py` extrai as questões do PDF do INEP (pypdfium2: posição
+das letras e recorte das figuras) e `scripts/revisao_prova.py` gera uma página de revisão lado a lado (original × como
+fica no TRIunfo, com o gabarito). Caderno Azul 2024: 1º dia, 17 de 17 sem aviso (1–12, inglês e espanhol); 2º dia,
+74 de 90 sem aviso. Avisos: alternativas que são imagens em grade (7) e fração/raiz desenhada (9).
+Resolvidos no piloto: colunas e margem de corte, espaços em negrito, marcador da alternativa, parágrafos e versos,
+fonte do texto, expoentes e índices (2¹⁹, H₂O), tabelas como uma imagem com o texto na descrição, figuras largas,
+continuação de página e uma rede de segurança para figura perdida.
+**Próximo passo:** o autor avalia as páginas de revisão; depois, alternativas em imagem, juntar com gabarito, TRI e
+assunto dos microdados e a revisão humana das questões. A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 
