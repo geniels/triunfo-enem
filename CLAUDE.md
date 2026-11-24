@@ -14,6 +14,9 @@ Autor: Geniel Bonfim (GitHub: geniels). Commits só em nome dele, **sem** linha 
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
 .\.venv\Scripts\python.exe scripts\importar_enem_dev.py  # (re)importa questões e imagens
 .\.venv\Scripts\python.exe scripts\importar_gabaritos.py 2026  # gabaritos oficiais do ENEM (precisa de requirements-dev.txt)
+.\.venv\Scripts\python.exe scripts\importar_prova_pdf.py provas\pdf\<prova>.pdf provas\<ano>-d<dia>  # extrai um caderno (ADR 0031)
+.\.venv\Scripts\python.exe scripts\revisao_prova.py provas\<ano>-d<dia> provas\pdf\<gabarito>.pdf <dia>  # revisão humana
+.\.venv\Scripts\python.exe scripts\importar_prova_revisada.py provas\<ano>-d<dia> provas\pdf\<gabarito>.pdf <dia>  # leva ao banco
 playwright-cli open http://localhost:8000                # testar a interface (desktop e 390 px)
 .\.venv\Scripts\python.exe -m unittest discover tests   # testes
 .\.venv\Scripts\python.exe instalador\construir.py       # gera dist\TRIunfo-Estudante-<versão>.exe (ADR 0017)

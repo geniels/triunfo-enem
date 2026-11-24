@@ -71,8 +71,9 @@ def colunas(pagina) -> list[tuple[float, float]]:
     # shortcut: página metade de largura inteira e metade em colunas sai como uma coluna só; em 2024/2025, só a da
     # redação, que não é questão
     if vao_no_meio(pagina, topo, base) < 5:
-        return [(esq, dir_ - 25)]
-    return [(esq, meio - 2), (meio + 2, dir_ - 25)]  # à direita, uma faixa decorativa
+        return [(esq, dir_ - 21)]
+    # À direita, uma faixa decorativa (em 2024, a 20,4 pt da borda); em 2025, o texto vai até 22,8 pt da borda
+    return [(esq, meio - 2), (meio + 2, dir_ - 21)]
 
 
 def faixa_util(pagina, topo_rel=TOPO_REL) -> tuple[float, float]:
@@ -356,6 +357,10 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
             desenhos += desenhos_no_texto(pagina, texto_util, caixas, x0, x1)
             if len(colunas(pagina)) == 2:
                 cortadas += vao_no_meio(pagina, y_topo, y_base) < 5  # rede de segurança: texto cortado no meio
+            # Rede de segurança: letra logo depois da margem direita (antes, "das" saía "da" em 2025). Só na última
+            # coluna: depois da primeira já começa a outra, e o meio tem a checagem de cima.
+            cortadas += c == len(colunas(pagina)) - 1 and any(x1 < (l + r) / 2 < x1 + 8 and r - l > 2 and y_base < b < y_topo and tp.get_text_range(i, 1).strip()
+                            for i in range(tp.count_chars()) for l, b, r, _ in [tp.get_charbox(i)])
             for o in pagina.get_objects(max_depth=2):  # rede de segurança: imagem da região que não virou figura
                 if o.type == raw.FPDF_PAGEOBJ_IMAGE:
                     l, b, r, t = o.get_bounds()
@@ -402,15 +407,14 @@ def extrair(pdf_path: Path, saida: Path, primeira=1, ultima=180) -> list[dict]:
                          **({"ate": m["ate"]} if "ate" in m else {})})
     questoes = [separar_alternativas(q) for q in questoes]
     for q in questoes:
-        trechos = q.pop("trechos")
-        if q["avisos"]:  # o texto comum não tem alternativas, então sempre cai aqui
-            usar_print(pdf, saida, q, trechos)
+        q["prints"] = recortar_prints(pdf, saida, q, q.pop("trechos"))
+        q["print"] = bool(q["avisos"])  # sugestão; a revisão humana decide (texto, print ou fora)
+        q["prefixo"], q["prefixo_figuras"] = "", []
     for comum in [q for q in questoes if q["idioma"] == "comum"]:
-        questoes.remove(comum)
+        questoes.remove(comum)  # o texto comum entra como print no começo de cada questão
         for q in questoes:
             if comum["numero"] <= q["numero"] <= comum["ate"]:
-                q["contexto"] = f"{comum['contexto']}\n\n{q['contexto']}".strip()
-                q["figuras"] = comum["figuras"] + q["figuras"]
+                q["prefixo"], q["prefixo_figuras"] = como_print(comum)["contexto"], comum["prints"]
                 q["originais"] = comum["originais"] + q["originais"]
     return questoes
 
@@ -422,16 +426,11 @@ def texto_plano(md: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[\[\]()*_]", "", md)).strip()
 
 
-def usar_print(pdf, saida: Path, q: dict, trechos) -> None:
-    """Questão com aviso (raiz ou fração desenhada, alternativas em imagem): entra como print do caderno, que mostra
-    exatamente o original. O texto extraído vira a descrição para o leitor de tela (ADR 0005), e os botões A-E
-    ficam só com a letra, porque as alternativas já estão no print (ADR 0030)."""
-    from PIL import ImageOps
+def recortar_prints(pdf, saida: Path, q: dict, trechos) -> list[str]:
+    """Print do caderno da questão (sem "QUESTÃO NN", só até onde vai o conteúdo), para o caso de ela entrar como
+    imagem (ADR 0030). Feito para todas: na revisão, qualquer questão pode trocar de texto para print."""
+    from PIL import Image, ImageOps
 
-    descricao = texto_plano(" ".join([q["contexto"], q["introducao"]]
-                                     + [f"Alternativa {a['letra']}: {a['texto']}" for a in q["alternativas"]]))
-    for nome in q["figuras"]:  # os recortes das figuras já estão dentro do print
-        (saida / nome).unlink(missing_ok=True)
     prints = []
     for i, (p, c, y_topo, y_base) in enumerate(trechos):
         pagina = pdf[p]
@@ -440,19 +439,57 @@ def usar_print(pdf, saida: Path, q: dict, trechos) -> None:
         if i == 0:
             y_topo -= 15  # começa abaixo de "QUESTÃO NN": o app mostra o número
         img = pagina.render(scale=2, crop=(x0 - esq, max(y_base - 3 - base_p, 0), dir_ - x1, max(topo_p - y_topo, 0))).to_pil()
-        caixa = ImageOps.invert(img.convert("L")).point(lambda v: 255 if v > 24 else 0).getbbox()
+        caixa = aparar_bordas(ImageOps.invert(img.convert("L")).point(lambda v: 255 if v > 24 else 0))
         if not caixa:  # trecho em branco (a questão terminou no fim da coluna)
             continue
-        img = img.crop((max(caixa[0] - 8, 0), max(caixa[1] - 8, 0), min(caixa[2] + 8, img.width), min(caixa[3] + 8, img.height)))
+        # Margem branca nova: a da página pode trazer resto de fio claro demais para contar como tinta
+        recorte = img.crop(caixa)
+        img = Image.new("RGB", (recorte.width + 16, recorte.height + 16), "white")
+        img.paste(recorte, (8, 8))
         nome = f"{q['numero']:03d}{q['idioma'][:2]}-print-{i + 1}.png"
         img.save(saida / nome, optimize=True)
         prints.append(nome)
-    q["figuras"] = prints
-    q["contexto"] = "\n\n".join(f"![{descricao if k == 0 else 'Continuação da questão'}](/imagens/{n})"
-                                for k, n in enumerate(prints))
-    q["introducao"] = ""
-    q["alternativas"] = [{"letra": letra, "texto": ""} for letra in "ABCDE"]
-    q["print"] = True
+    return prints
+
+
+def aparar_bordas(tinta):
+    """Caixa do conteúdo de um print, sem fio ou faixa colada à borda e separada do resto por um espaço em branco
+    (o separador das colunas, a faixa do título "Texto para as Questões"). tinta: 255 onde há algo impresso."""
+    def densidade(caixa):
+        x0, y0, x1, y1 = caixa
+        return tinta.crop(caixa).histogram()[255] / max((x1 - x0) * (y1 - y0), 1)
+
+    for _ in range(8):
+        caixa = tinta.getbbox()
+        if not caixa:
+            return None
+        l, t, r, b = caixa
+        # Para cada borda: a linha de 1 px a k px dela
+        lados = [lambda k: (l + k, t, l + k + 1, b), lambda k: (r - k - 1, t, r - k, b),
+                 lambda k: (l, t + k, r, t + k + 1), lambda k: (l, b - k - 1, r, b - k)]
+        apagou = False
+        for linha in lados:
+            k = 0
+            while k < 16 and densidade(linha(k)) > 0.3:  # o fio ou a faixa: linhas quase cheias
+                k += 1
+            if k and all(densidade(linha(k + j)) < 0.01 for j in range(6)):  # e um vão em branco depois
+                for j in range(k):
+                    tinta.paste(0, linha(j))
+                apagou = True
+        if not apagou:
+            return caixa
+    return tinta.getbbox()
+
+
+def como_print(q: dict) -> dict:
+    """A questão como print do caderno: o texto extraído vira a descrição para o leitor de tela (ADR 0005), e os
+    botões A-E ficam só com a letra, porque as alternativas estão no print (ADR 0030)."""
+    descricao = texto_plano(" ".join([q["contexto"], q["introducao"]]
+                                     + [f"Alternativa {a['letra']}: {a['texto']}" for a in q["alternativas"]]))
+    contexto = "\n\n".join(f"![{descricao if k == 0 else 'Continuação da questão'}](/imagens/{n})"
+                            for k, n in enumerate(q["prints"]))
+    return {**q, "contexto": contexto, "introducao": "", "figuras": q["prints"],
+            "alternativas": [{"letra": letra, "texto": ""} for letra in "ABCDE"]}
 
 
 def separar_alternativas(q: dict) -> dict:
@@ -477,7 +514,7 @@ def separar_alternativas(q: dict) -> dict:
     if q["introducao"].startswith("![") or not q["introducao"]:
         q["avisos"].append("enunciado não identificado")
     if q.pop("cortadas", 0):
-        q["avisos"].append("texto atravessa as colunas (página de largura inteira?): conferir com o original")
+        q["avisos"].append("texto passa da borda da coluna (pode ter saído cortado): conferir com o original")
     if q.pop("perdidas", 0):
         q["avisos"].append("figura possivelmente perdida: conferir com o original")
     if q.pop("desenhos", 0):

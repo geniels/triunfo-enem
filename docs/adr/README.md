@@ -38,6 +38,7 @@ sem precisar redescobrir por que as coisas são como são.
 | [0028](0028-conferir-minha-prova.md) | Conferir minha prova: acertos da prova real com o gabarito oficial | Aceita |
 | [0029](0029-assunto-das-questoes.md) | Assunto das questões pela Matriz de Referência do ENEM | Aceita |
 | [0030](0030-questoes-mistas-texto-e-print.md) | Provas novas: texto quando a extração é segura, print do caderno quando não é | Aceita |
+| [0031](0031-provas-novas-extracao-revisao-importacao.md) | Provas de 2024 e 2025: extração, revisão humana e importação | Aceita |
 
 Plano e próximos passos: [docs/ROADMAP.md](../ROADMAP.md).
 

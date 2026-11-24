@@ -19,3 +19,9 @@ graphify-out/
 # Instalador (gerado por instalador/construir.py)
 build/
 dist/
+
+# Provas em PDF da Fase 5.3 (ADR 0030): PDFs e extração se refazem com os scripts; as decisões da revisão
+# humana (revisao.json) ficam no git
+provas/**
+!provas/*/
+!provas/*/revisao.json

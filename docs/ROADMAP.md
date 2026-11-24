@@ -28,20 +28,18 @@ Rascunho e revisão do simulado publicados na **versão 0.5.1**.
 **Fase 4 concluída** (versão 0.5.7): a turma tem tela própria (`#turma`), aberta pelo atalho "Turma" ao lado da engrenagem,
 visível só no PC de quem organiza. **Fase 5 em andamento**, na ordem: 5.1 Conferir minha prova ✅ (versão 0.5.8, ADR 0028; gabaritos do ENEM 2026) ·
 5.2 assunto das questões ✅ (versão 0.5.9, ADR 0029; pacote de dados `dados-2026.2`) · 5.3 provas 2024/2025 (texto dos PDFs +
-microdados, com revisão humana) · 5.4 Raspberry Pi (servidor fixo da turma; precisa de um aparelho para testar).
+microdados, com revisão humana; aguardando a revisão) · 5.4 Raspberry Pi (servidor fixo da turma; precisa de um aparelho para testar).
 A Fase 3.3 (IA na redação) fica para depois, por decisão do autor.
-**5.3 em piloto** (2026-11-24): `scripts/importar_prova_pdf.py` extrai as questões do PDF do INEP (pypdfium2: posição
-das letras e recorte das figuras) e `scripts/revisao_prova.py` gera uma página de revisão lado a lado (original × como
-fica no TRIunfo, com o gabarito). Caderno Azul 2024: 1º dia, 17 de 17 sem aviso (1–12, inglês e espanhol); 2º dia,
-74 de 90 sem aviso. Avisos: alternativas que são imagens em grade (7) e fração/raiz desenhada (9).
-Resolvidos no piloto: colunas e margem de corte, espaços em negrito, marcador da alternativa, parágrafos e versos,
-fonte do texto, expoentes e índices (2¹⁹, H₂O), tabelas como uma imagem com o texto na descrição, figuras largas,
-continuação de página e uma rede de segurança para figura perdida.
-**Formato misto** (ADR 0030, sugestão do autor): questão com aviso entra como **print do caderno** (texto extraído como
-descrição para leitor de tela, botões A–E só com a letra); as demais, em texto. 2º dia de 2024: 74 em texto e 16 em
-print (~3 MB). O extrator parou de recortar enfeites da margem como figura (20 questões) e a contracapa na última.
-**Próximo passo:** rodar o 1º dia inteiro (13–90); juntar com gabarito, TRI e assunto dos microdados de 2024; levar
-as questões para o banco (com o print) e fazer a tela de revisão humana; repetir para 2025. A 3.3 (IA local) aguarda a medição de desempenho.
+**5.3: fluxo completo pronto, aguardando a revisão humana** (2026-11-24, ADRs 0030 e 0031). Os quatro cadernos
+Azuis (2024 e 2025, 1º e 2º dias) estão extraídos em `provas/` (370 questões; 40 sugeridas como print). Rodar os
+quatro cadernos achou e corrigiu erros sem aviso que o piloto não via: páginas de largura inteira, última letra
+perdida na margem, citações embaralhadas e expoentes na linha errada, agora com redes de segurança. O teste completo
+num banco de cópia confirmou o caminho: importação, app (print a 390 px e no tema escuro, texto comum das questões
+06 a 10 de 2025) e TRI de 2024 com a escala conferida. 2025 entra com assunto, mas **sem nota TRI** até o
+`inflate64` (Deflate64) ser autorizado.
+**Próximo passo:** o autor revisa as questões (`.\.venv\Scripts\python.exe scripts\revisao_prova.py provas\2024-d1 provas\pdf\2024_GB_impresso_D1_CD1.pdf 1`,
+idem para `2024-d2`, `2025-d1` e `2025-d2`); depois, `importar_prova_revisada.py` e `importar_tri.py 2024 2025`,
+pacote `dados-2026.3` e publicação (com o "pode publicar"). A 3.3 (IA local) aguarda a medição de desempenho.
 
 ## Fases
 

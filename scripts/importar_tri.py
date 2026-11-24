@@ -190,7 +190,14 @@ def importar(ano: int, con) -> None:
     f = ArquivoHTTP(URL.format(ano=ano))
     z = zipfile.ZipFile(io.BufferedReader(f, buffer_size=1 << 20))
     provas = itens_por_prova(ler_csv(z, f"ITENS_PROVA_{ano}.csv"))
-    participantes = ler_csv(z, f"MICRODADOS_ENEM_{ano}.csv", AMOSTRA_LINHAS)
+    # Desde 2024, as notas e respostas ficam em RESULTADOS_<ano>.csv (mesmas colunas)
+    nomes = {Path(n).name.upper() for n in z.namelist()}
+    arquivo = f"MICRODADOS_ENEM_{ano}.csv" if f"MICRODADOS_ENEM_{ano}.CSV" in nomes else f"RESULTADOS_{ano}.csv"
+    try:
+        participantes = ler_csv(z, arquivo, AMOSTRA_LINHAS)
+    except NotImplementedError:  # 2025: compactado em Deflate64, que o zipfile não lê
+        print(f"  ! {arquivo} usa uma compactação que o Python não abre: a escala não pode ser conferida")
+        participantes = []
     with con:
         resumo = casar_questoes(con, ano, provas)
         for sigla, area in AREAS.items():
