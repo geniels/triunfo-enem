@@ -39,10 +39,10 @@ do piloto não pegava:
 - **TRI e assunto** (`scripts/importar_tri.py`, sem mudança de método):
   - **2024:** as notas passaram para `RESULTADOS_2024.csv`. No teste, todas as questões casaram com o caderno
     oficial e a escala conferiu (erro médio de 0,03 ponto).
-  - **2025:** o casamento e o assunto funcionam, porque `ITENS_PROVA` abre normalmente. Mas `RESULTADOS_2025.csv`
-    vem em Deflate64, que o Python não lê. Sem conferir a escala, 2025 entra **sem nota TRI**, como já acontece com
-    anos que não conferem. A saída proposta é o pacote `inflate64`, só em `requirements-dev.txt`, e aguarda
-    autorização.
+  - **2025:** `RESULTADOS_2025.csv` vem em Deflate64, que o `zipfile` do Python não lê. O pacote `inflate64`
+    (autorizado pelo autor; só em `requirements-dev.txt`, fora do instalador) abre o arquivo. No teste, todas as
+    questões casaram e a escala conferiu nas quatro áreas (erro médio de 0,02 a 0,03 ponto). Sem o pacote, o
+    script avisa e 2025 fica sem nota TRI, como os anos que não conferem.
 
 ## Consequências
 - O que entra no banco foi visto por uma pessoa, e a decisão fica registrada no git.

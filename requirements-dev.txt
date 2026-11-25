@@ -2,3 +2,4 @@
 pypdf==7.1.1      # scripts/importar_gabaritos.py: lê os gabaritos em PDF do INEP (ADR 0028)
 pypdfium2==5.15.2 # scripts/importar_prova_pdf.py: posição das letras e recorte das figuras (piloto da Fase 5.3)
 pillow==13.0.0    # grava os recortes em PNG (usado pelo pypdfium2)
+inflate64==1.0.4  # scripts/importar_tri.py: RESULTADOS_2025.csv vem compactado em Deflate64 (ADR 0031)

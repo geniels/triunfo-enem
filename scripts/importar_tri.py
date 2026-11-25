@@ -26,6 +26,25 @@ sys.path.insert(0, str(RAIZ))
 from app import tri  # noqa: E402
 from app.db import DATA_DIR, conectar, criar_tabelas  # noqa: E402
 
+try:  # desde 2025 o INEP compacta RESULTADOS_<ano>.csv em Deflate64 (tipo 9), que o zipfile não abre
+    import inflate64
+
+    class _Deflate64:
+        def __init__(self):
+            self._i = inflate64.Inflater()
+
+        def decompress(self, dados: bytes) -> bytes:
+            return self._i.inflate(dados)
+
+        @property
+        def eof(self) -> bool:
+            return self._i.eof
+
+    _decompressor_original = zipfile._get_decompressor
+    zipfile._get_decompressor = lambda tipo: _Deflate64() if tipo == 9 else _decompressor_original(tipo)
+except ImportError:  # sem requirements-dev.txt: o ano em Deflate64 fica sem nota TRI (aviso em importar())
+    pass
+
 URL = "https://download.inep.gov.br/microdados/microdados_enem_{ano}.zip"
 AREAS = {"CN": "ciencias-natureza", "CH": "ciencias-humanas", "LC": "linguagens", "MT": "matematica"}
 LINGUA = {"ingles": "0", "espanhol": "1"}
@@ -195,8 +214,8 @@ def importar(ano: int, con) -> None:
     arquivo = f"MICRODADOS_ENEM_{ano}.csv" if f"MICRODADOS_ENEM_{ano}.CSV" in nomes else f"RESULTADOS_{ano}.csv"
     try:
         participantes = ler_csv(z, arquivo, AMOSTRA_LINHAS)
-    except NotImplementedError:  # 2025: compactado em Deflate64, que o zipfile não lê
-        print(f"  ! {arquivo} usa uma compactação que o Python não abre: a escala não pode ser conferida")
+    except NotImplementedError:  # Deflate64 sem o inflate64 instalado
+        print(f"  ! {arquivo} está em Deflate64: instale requirements-dev.txt para conferir a escala")
         participantes = []
     with con:
         resumo = casar_questoes(con, ano, provas)

@@ -35,8 +35,7 @@ Azuis (2024 e 2025, 1º e 2º dias) estão extraídos em `provas/` (370 questõe
 quatro cadernos achou e corrigiu erros sem aviso que o piloto não via: páginas de largura inteira, última letra
 perdida na margem, citações embaralhadas e expoentes na linha errada, agora com redes de segurança. O teste completo
 num banco de cópia confirmou o caminho: importação, app (print a 390 px e no tema escuro, texto comum das questões
-06 a 10 de 2025) e TRI de 2024 com a escala conferida. 2025 entra com assunto, mas **sem nota TRI** até o
-`inflate64` (Deflate64) ser autorizado.
+06 a 10 de 2025) e TRI de 2024 e 2025 com a escala conferida (2025 lido com o `inflate64`, por causa do Deflate64).
 **Próximo passo:** o autor revisa as questões (`.\.venv\Scripts\python.exe scripts\revisao_prova.py provas\2024-d1 provas\pdf\2024_GB_impresso_D1_CD1.pdf 1`,
 idem para `2024-d2`, `2025-d1` e `2025-d2`); depois, `importar_prova_revisada.py` e `importar_tri.py 2024 2025`,
 pacote `dados-2026.3` e publicação (com o "pode publicar"). A 3.3 (IA local) aguarda a medição de desempenho.
