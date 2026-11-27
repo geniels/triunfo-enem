@@ -66,8 +66,7 @@ class RevisaoEImportacao(unittest.TestCase):
             preparar(q, "texto", 2024)
         self.assertEqual(len(preparar(q, "print", 2024)[0]["alternativas"]), 5)
         fracao = {**QUESTAO, "avisos": ["fração, raiz ou traço desenhado no meio do texto: conferir com o original"]}
-        with self.assertRaises(ValueError):
-            preparar(fracao, "texto", 2024)
+        self.assertEqual(preparar(fracao, "texto", 2024)[0]["alternativas"][0]["texto"], "opção A")  # quem decide é o revisor
 
     def test_print_usa_a_imagem_do_caderno_e_so_as_letras(self):
         q, usadas = preparar(dict(QUESTAO), "print", 2025)

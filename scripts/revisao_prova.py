@@ -35,8 +35,6 @@ def sem_texto(q: dict) -> str:
     """Por que a questão não pode entrar como texto ("" se pode). Vale na revisão e na importação."""
     if [a["letra"] for a in q["alternativas"]] != list("ABCDE"):  # ex.: alternativas que são figuras
         return "o extrator não achou as alternativas A a E"
-    if any(a.startswith("fração, raiz") for a in q["avisos"]):  # na 2024-d2, 10 de 11 saíram desmontadas
-        return "fração ou raiz desenhada costuma sair desmontada no texto"
     return ""
 
 
@@ -149,7 +147,8 @@ function cartao(q) {
     <div class="decisao" role="group" aria-label="Decisão da questão ${q.numero}">
       ${["texto", "print", "fora"].map((x) => `<button type="button" data-chave="${esc(q.chave)}" data-decisao="${x}"
         aria-pressed="${d === x}" ${x === "texto" && q.sem_texto ? "disabled" : ""}>${NOMES[x]}</button>`).join("")}
-      <span class="estado" role="status">${q.sem_texto ? `Texto indisponível: ${esc(q.sem_texto)}.` : ""}</span>
+      <span class="estado" role="status">${q.sem_texto ? `Texto indisponível: ${esc(q.sem_texto)}.`
+        : q.conferir ? "Confira frações e raízes no texto: se algum traço sumiu, use Print." : ""}</span>
     </div>
   </section>`;
 }
@@ -194,6 +193,7 @@ def gerar(pasta: Path, gabarito_pdf: Path, dia: int) -> list[dict]:
         q["gabarito"] = g.get(q["idioma"] or "ingles") if isinstance(g, dict) else g
         q["chave"] = chave(q)
         q["sem_texto"] = sem_texto(q)
+        q["conferir"] = any(a.startswith("fração, raiz") for a in q["avisos"])  # na 2024-d2, 10 de 11 saíram desmontadas
         for campo in ("contexto", "introducao", "prefixo"):  # as figuras ficam na mesma pasta da página
             q[campo] = q[campo].replace("/imagens/", "")
         for a in q["alternativas"]:
