@@ -109,7 +109,7 @@ h1 { margin: .2rem 0 .5rem; font-size: 1.4rem; }
   <p><b id="progresso"></b> · <label><input type="checkbox" id="pendentes"> mostrar só as pendentes</label></p>
   <p>Compare com o caderno à esquerda. <b>Texto</b>: a versão em texto está fiel. <b>Print</b>: a questão entra como
   imagem do caderno (use quando o texto tiver qualquer erro). <b>Fora</b>: não entra no banco.
-  Questões com borda laranja têm aviso do extrator e já aparecem como print.</p>
+  Questões com borda laranja têm aviso do extrator: confira o texto com mais cuidado.</p>
 </div>
 <div id="lista"></div>
 <script src="markdown.js"></script>
@@ -135,7 +135,8 @@ const decidida = (q) => { const d = revisao[q.chave]?.decisao; return d === "tex
 
 function cartao(q) {
   const d = decidida(q);
-  const modo = d === "print" || (!d && q.print) ? "print" : "texto";
+  // Pendente mostra o texto (é ele que se julga; o print é igual ao recorte à esquerda), salvo se Texto está bloqueado
+  const modo = d === "print" || (!d && q.sem_texto) ? "print" : "texto";
   return `<section class="q ${q.avisos.length ? "aviso" : ""}" aria-labelledby="t-${esc(q.chave)}">
     <h2 id="t-${esc(q.chave)}">Questão ${q.numero}${q.idioma ? " (" + q.idioma + ")" : ""} · página ${q.pagina} ·
       gabarito ${esc(q.gabarito ?? "anulada")} · ${d ? "revisada: " + NOMES[d] : "pendente"}</h2>
