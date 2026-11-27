@@ -90,6 +90,7 @@ h1 { margin: .2rem 0 .5rem; font-size: 1.4rem; }
 .decisao { grid-column: 1 / -1; display: flex; gap: .5rem; flex-wrap: wrap; align-items: center; }
 .decisao button { font: inherit; padding: .5rem 1rem; border-radius: 8px; border: 2px solid #4b5563; background: #fff; cursor: pointer; }
 .decisao button[aria-pressed="true"] { background: #1d4ed8; border-color: #1d4ed8; color: #fff; font-weight: 700; }
+.decisao button:disabled { border-style: dashed; color: #6b7280; cursor: not-allowed; }
 .decisao button:focus-visible { outline: 3px solid #b45309; outline-offset: 2px; }
 .estado { color: #4b5563; }
 @media (max-width: 800px) { .q { grid-template-columns: 1fr; } .topo { position: static; } }
@@ -123,6 +124,7 @@ function previa(q, modo) {
 function cartao(q) {
   const d = revisao[q.chave]?.decisao;
   const modo = d === "print" || (!d && q.print) ? "print" : "texto";
+  const incompleta = q.alternativas.map((a) => a.letra).join("") !== "ABCDE";  // a importação recusa como texto
   return `<section class="q ${q.avisos.length ? "aviso" : ""}" aria-labelledby="t-${esc(q.chave)}">
     <h2 id="t-${esc(q.chave)}">Questão ${q.numero}${q.idioma ? " (" + q.idioma + ")" : ""} · página ${q.pagina} ·
       gabarito ${esc(q.gabarito ?? "anulada")} · ${d ? "revisada: " + NOMES[d] : "pendente"}</h2>
@@ -134,8 +136,8 @@ function cartao(q) {
     </div>
     <div class="decisao" role="group" aria-label="Decisão da questão ${q.numero}">
       ${["texto", "print", "fora"].map((x) => `<button type="button" data-chave="${esc(q.chave)}" data-decisao="${x}"
-        aria-pressed="${d === x}">${NOMES[x]}</button>`).join("")}
-      <span class="estado" role="status"></span>
+        aria-pressed="${d === x}" ${x === "texto" && incompleta ? "disabled" : ""}>${NOMES[x]}</button>`).join("")}
+      <span class="estado" role="status">${incompleta ? "Texto indisponível: o extrator não achou as alternativas A a E." : ""}</span>
     </div>
   </section>`;
 }

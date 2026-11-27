@@ -59,6 +59,12 @@ class RevisaoEImportacao(unittest.TestCase):
         self.assertIn("](/imagens/inep2025-006-1.png)", q["contexto"])
         self.assertEqual(q["alternativas"][0]["texto"], "opção A")
 
+    def test_texto_sem_as_cinco_alternativas_e_recusado(self):
+        q = {**QUESTAO, "alternativas": QUESTAO["alternativas"][:2]}
+        with self.assertRaises(ValueError):
+            preparar(q, "texto", 2024)
+        self.assertEqual(len(preparar(q, "print", 2024)[0]["alternativas"]), 5)
+
     def test_print_usa_a_imagem_do_caderno_e_so_as_letras(self):
         q, usadas = preparar(dict(QUESTAO), "print", 2025)
         self.assertEqual(usadas, ["006co-print-1.png", "006-print-1.png"])  # a figura do texto não vai junto
