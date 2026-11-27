@@ -25,7 +25,7 @@ from app.db import DATA_DIR, conectar, criar_tabelas, id_questao  # noqa: E402
 from importar_enem_dev import area_oficial  # noqa: E402
 from importar_gabaritos import ler_gabarito  # noqa: E402
 from importar_prova_pdf import como_print  # noqa: E402
-from revisao_prova import chave  # noqa: E402
+from revisao_prova import chave, sem_texto  # noqa: E402
 
 IMAGEM = re.compile(r"\]\(/imagens/([^()\s]+)\)")
 
@@ -34,8 +34,8 @@ def preparar(q: dict, decisao: str, ano: int) -> tuple[dict, list[str]]:
     """A questão como vai ao banco e as imagens que ela usa (nomes na pasta da extração)."""
     if decisao == "print":
         q = como_print(q)
-    elif [a["letra"] for a in q["alternativas"]] != list("ABCDE"):  # ex.: alternativas que são figuras
-        raise ValueError(f"questão {chave(q)}: o texto não tem as alternativas A a E. Revise como Print ou Fora.")
+    elif motivo := sem_texto(q):
+        raise ValueError(f"questão {chave(q)} não pode entrar como texto ({motivo}). Revise como Print ou Fora.")
     contexto = "\n\n".join(x for x in (q["prefixo"], q["contexto"]) if x)
     usadas = IMAGEM.findall(" ".join([contexto, q["introducao"]] + [a["texto"] for a in q["alternativas"]]))
     trocar = lambda s: IMAGEM.sub(lambda m: f"](/imagens/inep{ano}-{m.group(1)})", s)  # noqa: E731

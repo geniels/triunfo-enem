@@ -29,6 +29,9 @@ do piloto não pegava:
   gabarito. Para cada questão, o autor escolhe **Texto**, **Print** ou **Fora**. Cada clique grava em
   `provas/<ano>-d<dia>/revisao.json`, que é **versionado** como registro da revisão. Os PDFs e a extração ficam
   fora do git (refazem-se com os scripts).
+  - **Texto bloqueado** (na página e na importação) quando o extrator não acha as alternativas A a E ou avisa de
+    fração, raiz ou traço desenhado. Na revisão do 2º dia de 2024, 10 de 11 questões com esse aviso tinham saído
+    desmontadas em texto, e a prévia parecia normal à primeira vista.
 - **Importação** (`scripts/importar_prova_revisada.py`):
   - **Questão pendente não entra.** A opção `--sem-revisao` existe só para testar o app, avisa na saída e não deve
     gerar o pacote de dados.

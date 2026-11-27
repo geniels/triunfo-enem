@@ -19,6 +19,7 @@ QUESTAO = {
     "numero": 6, "idioma": "", "contexto": "Texto.\n\n![Tabela](/imagens/006-1.png)", "introducao": "A autora",
     "alternativas": [{"letra": x, "texto": f"opção {x}"} for x in "ABCDE"], "prints": ["006-print-1.png"],
     "prefixo": "![De próprio punho](/imagens/006co-print-1.png)", "prefixo_figuras": ["006co-print-1.png"],
+    "avisos": [],
 }
 
 
@@ -64,6 +65,9 @@ class RevisaoEImportacao(unittest.TestCase):
         with self.assertRaises(ValueError):
             preparar(q, "texto", 2024)
         self.assertEqual(len(preparar(q, "print", 2024)[0]["alternativas"]), 5)
+        fracao = {**QUESTAO, "avisos": ["fração, raiz ou traço desenhado no meio do texto: conferir com o original"]}
+        with self.assertRaises(ValueError):
+            preparar(fracao, "texto", 2024)
 
     def test_print_usa_a_imagem_do_caderno_e_so_as_letras(self):
         q, usadas = preparar(dict(QUESTAO), "print", 2025)

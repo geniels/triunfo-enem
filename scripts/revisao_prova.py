@@ -31,6 +31,15 @@ def chave(q: dict) -> str:
     return f"{q['numero']}-{q['idioma']}" if q["idioma"] else str(q["numero"])
 
 
+def sem_texto(q: dict) -> str:
+    """Por que a questão não pode entrar como texto ("" se pode). Vale na revisão e na importação."""
+    if [a["letra"] for a in q["alternativas"]] != list("ABCDE"):  # ex.: alternativas que são figuras
+        return "o extrator não achou as alternativas A a E"
+    if any(a.startswith("fração, raiz") for a in q["avisos"]):  # na 2024-d2, 10 de 11 saíram desmontadas
+        return "fração ou raiz desenhada costuma sair desmontada no texto"
+    return ""
+
+
 def gravar_decisao(pasta: Path, dados: dict) -> dict:
     """Grava uma decisão em revisao.json (arquivo temporário + troca: um Ctrl+C não deixa o arquivo pela metade)."""
     if dados.get("decisao") not in DECISOES or not isinstance(dados.get("chave"), str):
@@ -121,10 +130,12 @@ function previa(q, modo) {
       <b>${a.letra}</b> ${markdown(a.texto)}</li>`).join("")}</ol>`;
 }
 
+// "Texto" gravado antes do bloqueio não vale: a questão volta a ficar pendente
+const decidida = (q) => { const d = revisao[q.chave]?.decisao; return d === "texto" && q.sem_texto ? undefined : d; };
+
 function cartao(q) {
-  const d = revisao[q.chave]?.decisao;
+  const d = decidida(q);
   const modo = d === "print" || (!d && q.print) ? "print" : "texto";
-  const incompleta = q.alternativas.map((a) => a.letra).join("") !== "ABCDE";  // a importação recusa como texto
   return `<section class="q ${q.avisos.length ? "aviso" : ""}" aria-labelledby="t-${esc(q.chave)}">
     <h2 id="t-${esc(q.chave)}">Questão ${q.numero}${q.idioma ? " (" + q.idioma + ")" : ""} · página ${q.pagina} ·
       gabarito ${esc(q.gabarito ?? "anulada")} · ${d ? "revisada: " + NOMES[d] : "pendente"}</h2>
@@ -136,19 +147,19 @@ function cartao(q) {
     </div>
     <div class="decisao" role="group" aria-label="Decisão da questão ${q.numero}">
       ${["texto", "print", "fora"].map((x) => `<button type="button" data-chave="${esc(q.chave)}" data-decisao="${x}"
-        aria-pressed="${d === x}" ${x === "texto" && incompleta ? "disabled" : ""}>${NOMES[x]}</button>`).join("")}
-      <span class="estado" role="status">${incompleta ? "Texto indisponível: o extrator não achou as alternativas A a E." : ""}</span>
+        aria-pressed="${d === x}" ${x === "texto" && q.sem_texto ? "disabled" : ""}>${NOMES[x]}</button>`).join("")}
+      <span class="estado" role="status">${q.sem_texto ? `Texto indisponível: ${esc(q.sem_texto)}.` : ""}</span>
     </div>
   </section>`;
 }
 
 const progresso = () => {
   document.getElementById("progresso").textContent =
-    `${questoes.filter((q) => revisao[q.chave]).length} de ${questoes.length} revisadas`;
+    `${questoes.filter(decidida).length} de ${questoes.length} revisadas`;
 };
 function desenhar() {
   const so = document.getElementById("pendentes").checked;
-  document.getElementById("lista").innerHTML = questoes.filter((q) => !so || !revisao[q.chave]).map(cartao).join("");
+  document.getElementById("lista").innerHTML = questoes.filter((q) => !so || !decidida(q)).map(cartao).join("");
   progresso();
 }
 
@@ -181,6 +192,7 @@ def gerar(pasta: Path, gabarito_pdf: Path, dia: int) -> list[dict]:
         g = gab.get(str(q["numero"]))
         q["gabarito"] = g.get(q["idioma"] or "ingles") if isinstance(g, dict) else g
         q["chave"] = chave(q)
+        q["sem_texto"] = sem_texto(q)
         for campo in ("contexto", "introducao", "prefixo"):  # as figuras ficam na mesma pasta da página
             q[campo] = q[campo].replace("/imagens/", "")
         for a in q["alternativas"]:
